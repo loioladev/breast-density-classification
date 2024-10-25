@@ -1,0 +1,9 @@
+[project]
+name = "breast-density-ai"
+version = "0.1.0"
+description = "Breast density classification using CNNs"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "loguru>=0.7.2",
+]
