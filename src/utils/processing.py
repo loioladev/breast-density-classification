@@ -8,6 +8,7 @@ import logging
 
 import cv2
 import numpy as np
+from skimage.morphology import binary_closing, binary_opening, dilation, disk, erosion
 
 logger = logging.getLogger()
 
@@ -49,4 +50,47 @@ def recort_breast(image: np.ndarray) -> tuple[np.ndarray, tuple[int, int, int, i
     x, y, w, h = cv2.boundingRect(breast_contour)
     image = image[y : y + h, x : x + w]
 
+    return image, (x, y, w, h)
+
+
+def recort_breast_morp(
+    image: np.ndarray,
+) -> tuple[np.ndarray, tuple[int, int, int, int]]:
+    """
+    Recort the breast from the image, excluding the excess empty space
+    and the artifacts that may be present in the image. This function
+    uses morphological operations to process the image, inspired by
+    the following work: DOI - 10.1109/ICBAPS.2015.7292214
+
+    :param image: Image to be processed
+    :return image: Processed image and the bounding box of the breast
+    """
+    # -- thresholding
+    _, binary_image = cv2.threshold(image, 18, 255, cv2.THRESH_BINARY)
+
+    # -- find the largest contour
+    contours, _ = cv2.findContours(
+        binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
+    largest_contour = max(contours, key=cv2.contourArea)
+
+    # -- create a binary image with the largest contour
+    mask = np.zeros_like(image)
+    cv2.drawContours(mask, [largest_contour], 0, 255, -1)
+
+    # -- apply morphological operations
+    mask = binary_opening(mask, disk(1))
+    mask = binary_closing(mask, disk(1))
+    eroded_mask = erosion(mask, disk(5))
+    dilatated_mask = dilation(eroded_mask, disk(5))
+
+    # -- convert mask from bool to int
+    dilatated_mask = dilatated_mask.astype(np.uint8)
+
+    # -- apply the mask to the image
+    image = cv2.bitwise_and(image, image, mask=dilatated_mask)
+
+    # -- crop the image
+    x, y, w, h = cv2.boundingRect(largest_contour)
+    image = image[y : y + h, x : x + w]
     return image, (x, y, w, h)

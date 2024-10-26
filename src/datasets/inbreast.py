@@ -20,7 +20,7 @@ import numpy as np
 import pandas as pd
 import pydicom
 
-from src.utils.processing import recort_breast
+from src.utils.processing import recort_breast_morp
 
 logger = logging.getLogger()
 
@@ -44,7 +44,7 @@ def process_inbreast_image(dicom_path: str, output: str, dicom_ids: set[str]) ->
     image = (image / ratio).astype("uint8")
 
     # -- recort black space
-    image, _ = recort_breast(image)
+    image, _ = recort_breast_morp(image)
 
     # -- save image in format filename_laterality_view.png
     filename = f"{split_name[0]}_{split_name[3]}_{split_name[4]}.png"
