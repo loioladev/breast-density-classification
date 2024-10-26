@@ -38,8 +38,15 @@ def create_parser() -> argparse.ArgumentParser:
         help="Path to the output directory",
         default="./data",
     )
+    parser_convert.add_argument(
+        "-p", 
+        "--processes",
+        type=int,
+        help="Number of processes to use",
+        default=1,
+    )
     parser_convert.set_defaults(
-        func=lambda args: convert(args.dataset, args.path, args.output)
+        func=lambda args: convert(args.dataset, args.path, args.output, args.processes)
     )
 
     # -- train
@@ -55,13 +62,14 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def convert(dataset: str, path: str, output: str) -> None:
+def convert(dataset: str, path: str, output: str, processes: int) -> None:
     """
     Convert the dataset to the training model format
 
     :param dataset: Name of dataset to convert
     :param path: Path to the dataset
     :param output: Path to the output directory
+    :param processes: Number of processes to use
     """
     logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     logger = logging.getLogger()
@@ -69,7 +77,7 @@ def convert(dataset: str, path: str, output: str) -> None:
 
     # Start conversion
     if dataset == "inbreast":
-        convert_inbreast(path, output)
+        convert_inbreast(path, output, processes)
 
 
 def train(fname: str) -> None:

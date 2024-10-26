@@ -12,7 +12,7 @@ logger = logging.getLogger()
 def main(args: dict) -> None:
     """
     Training function for the script
-    
+
     :param args: Dictionary containing the parameters for the training
     """
     # -- set device
@@ -22,7 +22,7 @@ def main(args: dict) -> None:
     # ----------------------------------------------------------------------- #
     #  PASSED IN PARAMS FROM CONFIG FILE
     # ----------------------------------------------------------------------- #
-    
+
     # -- SEED
     seed = args["meta"]["seed"]
     set_seed(seed)
@@ -36,5 +36,3 @@ def main(args: dict) -> None:
         yaml.dump(args, f)
         logger.info(f"Training parameters stored in {dump}")
     # ----------------------------------------------------------------------- #
-
-

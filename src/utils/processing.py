@@ -3,6 +3,7 @@ This module contains functions to process breast images, such as
 cropping the breast from the image and checking if the breast is
 on the left side of the image
 """
+
 import logging
 
 import cv2
@@ -35,24 +36,17 @@ def recort_breast(image: np.ndarray) -> tuple[np.ndarray, tuple[int, int, int, i
     :return image: Processed image and the bounding box of the breast
     """
     # -- thresholding
-    _, binary_image = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-    left_side = left_side_breast(binary_image)
-    if not left_side:
-        binary_image = cv2.flip(binary_image, 1)
+    blur = cv2.GaussianBlur(image, (5, 5), 0)
+    _, binary_image = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
     # -- find the biggest contour
-    # TODO: check methods to extract the breast contour bbox
     contours, _ = cv2.findContours(
         binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
     breast_contour = max(contours, key=cv2.contourArea)
-    
+
     # -- crop the image
     x, y, w, h = cv2.boundingRect(breast_contour)
     image = image[y : y + h, x : x + w]
-
-    if not left_side:
-        image = cv2.flip(image, 1)
 
     return image, (x, y, w, h)

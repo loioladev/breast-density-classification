@@ -12,53 +12,68 @@ extracted INbreast dataset folder.
 """
 
 import logging
+import multiprocessing
 import os
 
 import cv2
 import numpy as np
 import pandas as pd
 import pydicom
-from tqdm.contrib.logging import logging_redirect_tqdm
 
 from src.utils.processing import recort_breast
 
 logger = logging.getLogger()
 
 
-def process_dicom(dicom_path: str, output: str, dicom_ids: set[str]) -> None:
+def process_inbreast_image(dicom_path: str, output: str, dicom_ids: set[str]) -> None:
+    """
+    Convert the image from DICOM to PNG format
+
+    :param dicom_path: Path to the DICOM directory
+    :param output: Path to the output directory
+    :param dicom_ids: Set of DICOM IDs to be processed
+    """
+    split_name = os.path.basename(dicom_path).split("_")
+    if split_name[0] not in dicom_ids:
+        return
+
+    image = pydicom.pixel_array(dicom_path)
+
+    # -- convert to 8-bit image
+    ratio = np.amax(image) / 256
+    image = (image / ratio).astype("uint8")
+
+    # -- recort black space
+    image, _ = recort_breast(image)
+
+    # -- save image in format filename_laterality_view.png
+    filename = f"{split_name[0]}_{split_name[3]}_{split_name[4]}.png"
+    cv2.imwrite(os.path.join(output, filename), image)
+
+
+def process_dicom(
+    dicom_path: str, output: str, dicom_ids: set[str], processes: int = 1
+) -> None:
     """
     Process the DICOM files in the INbreast dataset
 
     :param dicom_path: Path to the DICOM directory
     :param output: Path to the output directory
     :param dicom_ids: Set of DICOM IDs to be processed
+    :param processes: Number of processes to use
     """
     logger.info("Processing DICOM files")
     output = os.path.join(output, "images")
     os.makedirs(output, exist_ok=True)
 
     # -- read dicom files and convert to 8-bit images
-    for file in os.listdir(dicom_path):
-        file_id = file.split("_")[0]
-        if file_id not in dicom_ids:
-            continue
-        file = os.path.join(dicom_path, file)
-        image = pydicom.pixel_array(file)
-
-        # -- convert to 8-bit image
-        ratio = np.amax(image) / 256
-        image = (image / ratio).astype("uint8")
-
-        # -- recort black space
-        # image, _ = recort_breast(image)
-
-        # -- save image in format filename_laterality_view.png
-        split_name = os.path.basename(file).split("_")
-        filename = f"{split_name[0]}_{split_name[3]}_{split_name[4]}.png"
-        cv2.imwrite(os.path.join(output, filename), image)
-
-
-    logger.info("DICOM files processed")
+    files = [os.path.join(dicom_path, file) for file in os.listdir(dicom_path)]
+    with multiprocessing.Pool(processes) as pool:
+        pool.starmap(
+            process_inbreast_image,
+            [(file, output, dicom_ids) for file in files],
+        )
+    logger.info(f"DICOM files done with {processes} processes")
 
 
 def process_csv(csv_path: str, output: str) -> pd.DataFrame:
@@ -97,17 +112,18 @@ def process_csv(csv_path: str, output: str) -> pd.DataFrame:
     # -- save csv file
     os.makedirs(output, exist_ok=True)
     df.to_csv(os.path.join(output, "metadata.csv"), index=False)
-    
+
     logger.info("CSV file processed")
     return df
 
 
-def convert_inbreast(path: str, output: str) -> None:
+def convert_inbreast(path: str, output: str, processes: int = 1) -> None:
     """
     Convert the INbreast dataset to the training model format
 
     :param path: Path to the INbreast dataset
     :param output: Path to the output directory
+    :param processes: Number of processes to use
     """
     if not os.path.exists(path):
         raise FileNotFoundError(f"Path {path} does not exist")
@@ -117,5 +133,5 @@ def convert_inbreast(path: str, output: str) -> None:
 
     df = process_csv(csv_path, output)
     dicom_ids = set(df["filename"].astype(str))
-    process_dicom(dicom_path, output, dicom_ids)
+    process_dicom(dicom_path, output, dicom_ids, processes)
     logger.info("INbreast dataset processed")
