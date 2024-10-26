@@ -1,2 +1,6 @@
+meta:
+    seed: 42
+
 logging:
-  folder: './logs'
+    folder: './logs'
+    level: 'INFO'

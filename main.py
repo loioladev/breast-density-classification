@@ -3,6 +3,7 @@ import logging
 
 import yaml
 
+from src.datasets.inbreast import convert_inbreast
 from src.train import main as app_main
 
 
@@ -13,19 +14,67 @@ def create_parser() -> argparse.ArgumentParser:
     :return parser: The parser object
     """
     parser = argparse.ArgumentParser(description="Breast density training")
-    parser.add_argument(
+    subparser = parser.add_subparsers(
+        title="Commands", help="Available commands", dest="command"
+    )
+
+    # -- convert
+    parser_convert = subparser.add_parser("convert", help="Convert the dataset")
+    parser_convert.add_argument(
+        "dataset",
+        type=str,
+        choices=["inbreast"],
+        help="Dataset to convert",
+    )
+    parser_convert.add_argument(
+        "path",
+        type=str,
+        help="Path to the dataset",
+    )
+    parser_convert.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        help="Path to the output directory",
+        default="./data",
+    )
+    parser_convert.set_defaults(
+        func=lambda args: convert(args.dataset, args.path, args.output)
+    )
+
+    # -- train
+    parser_training = subparser.add_parser("train", help="Train the model")
+    parser_training.add_argument(
         "-f",
         "--fname",
         type=str,
         help="name of config file to load",
-        default="configs.yaml",
+        default="./configs/configs.yaml",
     )
+    parser_training.set_defaults(func=lambda args: train(args.fname))
     return parser
 
 
-def main(fname: str) -> None:
+def convert(dataset: str, path: str, output: str) -> None:
     """
-    Main function
+    Convert the dataset to the training model format
+
+    :param dataset: Name of dataset to convert
+    :param path: Path to the dataset
+    :param output: Path to the output directory
+    """
+    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
+    # Start conversion
+    if dataset == "inbreast":
+        convert_inbreast(path, output)
+
+
+def train(fname: str) -> None:
+    """
+    Training function for the model
 
     :param fname: name of config file to load
     """
@@ -44,7 +93,17 @@ def main(fname: str) -> None:
     app_main(args=params)
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Main function"""
     parser = create_parser()
     args = parser.parse_args()
-    main(args.fname)
+
+    if not args.command:
+        parser.print_help()
+        return
+
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()
