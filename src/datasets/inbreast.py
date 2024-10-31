@@ -135,3 +135,19 @@ def convert_inbreast(path: str, output: str, processes: int = 1) -> None:
     dicom_ids = set(df["filename"].astype(str))
     process_dicom(dicom_path, output, dicom_ids, processes)
     logger.info("INbreast dataset processed")
+
+
+
+def get_inbreast(csv_path: str, image_path: str) -> pd.DataFrame:
+    """
+    Get the INbreast dataset prepared for the training
+
+    :param csv_path: Path to the CSV file
+    :param image_path: Path to the images directory
+    :return: DataFrame with the path and target columns
+    """
+    df = pd.read_csv(csv_path)
+    df["target"] = df["density"].apply(lambda x: int(x) - 1)
+    df["path"] = df.apply(lambda row: os.path.join(image_path, f"{row['filename']}_{row['laterality']}_{row['view']}.dcm"), axis=1)
+    df = df[["path", "target"]]
+    return df

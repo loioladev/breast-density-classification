@@ -1,6 +1,13 @@
 meta:
     seed: 42
 
+data:
+    datasets_path: ''       # path to structured folder of datasets
+    datasets: ['inbreast']  # available datasets ['inbreast']
+    sampler: 'weightened'   # choose between ['weightened', 'random', 'sequential']
+    batch_size: 8
+    workers: 4
+
 logging:
     folder: './logs'
     level: 'INFO'
