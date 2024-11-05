@@ -137,7 +137,6 @@ def convert_inbreast(path: str, output: str, processes: int = 1) -> None:
     logger.info("INbreast dataset processed")
 
 
-
 def get_inbreast(csv_path: str, image_path: str) -> pd.DataFrame:
     """
     Get the INbreast dataset prepared for the training
@@ -148,6 +147,11 @@ def get_inbreast(csv_path: str, image_path: str) -> pd.DataFrame:
     """
     df = pd.read_csv(csv_path)
     df["target"] = df["density"].apply(lambda x: int(x) - 1)
-    df["path"] = df.apply(lambda row: os.path.join(image_path, f"{row['filename']}_{row['laterality']}_{row['view']}.dcm"), axis=1)
+    df["path"] = df.apply(
+        lambda row: os.path.join(
+            image_path, f"{row['filename']}_{row['laterality']}_{row['view']}.dcm"
+        ),
+        axis=1,
+    )
     df = df[["path", "target"]]
     return df

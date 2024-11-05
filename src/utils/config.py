@@ -1,3 +1,8 @@
+"""
+This module contains the functions to configure some of the global varibales to
+be used in the training process.
+"""
+
 import random
 
 import numpy
@@ -30,6 +35,6 @@ def set_device() -> torch.device:
     if not torch.cuda.is_available():
         device = torch.device("cpu")
     else:
-        device = torch.device("cuda")
+        device = torch.device("cuda:0")
         torch.cuda.set_device(device)
     return device

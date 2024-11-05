@@ -6,6 +6,8 @@ import yaml
 from src.datasets.inbreast import convert_inbreast
 from src.train import main as app_main
 
+LOGGER_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
 
 def create_parser() -> argparse.ArgumentParser:
     """
@@ -39,7 +41,7 @@ def create_parser() -> argparse.ArgumentParser:
         default="./data",
     )
     parser_convert.add_argument(
-        "-p", 
+        "-p",
         "--processes",
         type=int,
         help="Number of processes to use",
@@ -71,11 +73,11 @@ def convert(dataset: str, path: str, output: str, processes: int) -> None:
     :param output: Path to the output directory
     :param processes: Number of processes to use
     """
-    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    logging.basicConfig(format=LOGGER_FORMAT)
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
-    # Start conversion
+    # -- start conversion
     if dataset == "inbreast":
         convert_inbreast(path, output, processes)
 
@@ -86,18 +88,18 @@ def train(fname: str) -> None:
 
     :param fname: name of config file to load
     """
-    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    logging.basicConfig(format=LOGGER_FORMAT)
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
-    # Load script params
+    # -- load script params
     logger.info(f"Loading config file: {fname}")
     params = None
     with open(fname) as f:
         params = yaml.load(f, Loader=yaml.FullLoader)
     logger.info("Params loaded successfully")
 
-    # Start training
+    # -- start training
     app_main(args=params)
 
 

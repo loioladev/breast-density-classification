@@ -1,14 +1,32 @@
+"""
+This module constains the codes to load the datasets converted and return the
+dataloader of the selected datasets to use
+"""
+
+import logging
+import os
+import sys
+
+import numpy as np
+import pandas as pd
+from pydicom.pixels import pixel_array
+from torch.utils.data import (
+    DataLoader,
+    Dataset,
+    RandomSampler,
+    SequentialSampler,
+    WeightedRandomSampler,
+)
 
 from src.datasets.inbreast import get_inbreast
-import pandas as pd
-import os
-from pydicom.pixels import pixel_array
-import numpy as np
-from torch.utils.data import Dataset, Dataloader, WeightedRandomSampler, RandomSampler, SequentialSampler
+
+logger = logging.getLogger()
 
 
 class ImageDataset(Dataset):
-    def __init__(self, csv: pd.DataFrame, transform: None, target_transform: None) -> None:
+    def __init__(
+        self, csv: pd.DataFrame, transform=None, target_transform=None
+    ) -> None:
         """
         Constructor of the class
 
@@ -34,11 +52,11 @@ class ImageDataset(Dataset):
         row = self.csv.iloc[idx]
 
         # -- get image
-        image_path = row['path']
+        image_path = row["path"]
         image = pixel_array(image_path)
 
         # -- get label
-        label = row['target']
+        label = row["target"]
 
         # -- apply transformations
         if self.transform:
@@ -47,7 +65,6 @@ class ImageDataset(Dataset):
             label = self.target_transform(label)
 
         return image, label
-
 
 
 def get_dataframe(datasets: list[str], datasets_path: str) -> pd.DataFrame:
@@ -60,38 +77,48 @@ def get_dataframe(datasets: list[str], datasets_path: str) -> pd.DataFrame:
     a csv file named 'metadata.csv' and a folder with the images named 'images'
     :return dataframe: A DataFrame object containing the targets and paths.
     """
-    func = {
-        "inbreast": get_inbreast
-    }
+    func = {"inbreast": get_inbreast}
     entire_df = pd.DataFrame(columns=["target", "path"])
 
     # -- merge all datasets
     for dataset in datasets:
         dataset_path = os.path.join(datasets_path, dataset)
-        dataset_df = func[dataset](os.path.join(dataset_path, "metadata.csv"), os.path.join(dataset_path, "images"))
-        entire_df = pd.concat(entire_df, dataset_df)
+        if not os.path.exists(dataset_path):
+            logger.error(f"Path {dataset_path} does not exist")
+            sys.exit()
+        dataset_df = func[dataset](
+            os.path.join(dataset_path, "metadata.csv"),
+            os.path.join(dataset_path, "images"),
+        )
+        entire_df = pd.concat([entire_df, dataset_df], ignore_index=True)
 
     return entire_df
 
 
-def get_dataloader(dataset: ImageDataset, batch_size: int, sampler_cfg: str = '', workers: int = 0, shuffle: bool = False) -> Dataloader:
+def get_dataloader(
+    dataset: ImageDataset,
+    batch_size: int,
+    sampler_cfg: str = "",
+    workers: int = 0,
+    shuffle: bool = False,
+) -> DataLoader:
     """
     Get instance of dataloader according to dataset
 
     :param dataset: Instance of the ImageDataset
     :param batch_size: The number of items inside a batch
-    :param sampler_cfg: The name of the sampler to use. Options are 'weightened','random' and 'sequential'. 
+    :param sampler_cfg: The name of the sampler to use. Options are 'weightened','random' and 'sequential'.
     If none, no sampler will be used
     :param workers: Number of workers to load the data
     :param shuffle: Whether to shuffle the data before creating the dataloader
     :
     """
     samplers = {
-        "weightened": WeightedRandomSampler(dataset, ),
-        "random": RandomSampler,
-        "sequential": SequentialSampler,
+        # "weightened": WeightedRandomSampler(dataset, ),
+        # "random": RandomSampler,
+        # "sequential": SequentialSampler,
         "": None
     }
     sampler = samplers[sampler_cfg]
-    dataloader = Dataloader(dataset, batch_size, shuffle, sampler, num_workers=workers)
+    dataloader = DataLoader(dataset, batch_size, shuffle, sampler, num_workers=workers)
     return dataloader
