@@ -17,6 +17,8 @@ from torch.utils.data import (
     SequentialSampler,
     WeightedRandomSampler,
 )
+from sklearn.model_selection import train_test_split
+import cv2
 
 from src.datasets.inbreast import get_inbreast
 
@@ -53,7 +55,10 @@ class ImageDataset(Dataset):
 
         # -- get image
         image_path = row["path"]
-        image = pixel_array(image_path)
+        if image_path.endswith(".dcm"):
+            image = pixel_array(image_path)
+        else:
+            image = cv2.imread(image_path, cv2.IMREAD_ANYCOLOR)
 
         # -- get label
         label = row["target"]
@@ -66,8 +71,43 @@ class ImageDataset(Dataset):
 
         return image, label
 
+    def weights(self) -> list[float]:
+        """
+        Return the weights of each image in the dataset
 
-def get_dataframe(datasets: list[str], datasets_path: str) -> pd.DataFrame:
+        :return weights: The weights of each image
+        """
+        values = self.csv["target"].value_counts()
+        weights = [1 / values[i] for i in self.csv["target"].values]
+        return weights
+
+
+def split_dataset(
+    dataset: pd.DataFrame, split: float, seed: int
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Split datasets into training (train/validation) and testing sets
+
+    :param dataset: DataFrame of the entire dataset
+    :param split: Value to maintain in the training dataframe
+    :param seed: Value to achieve reproducible results
+    :return dataframes: The train and test dataframes
+    """
+    train_df, test_df = [], []
+    for _, group in dataset.groupby("dataset"):
+        train_aux, test_aux = train_test_split(
+            group, train_size=split, random_state=seed
+        )
+        train_df.append(train_aux)
+        test_df.append(test_aux)
+    train_df = pd.concat(train_df, ignore_index=True)
+    test_df = pd.concat(test_df, ignore_index=True)
+    return train_df, test_df
+
+
+def get_dataframe(
+    datasets: list[str], datasets_path: str, seed: int, split: float = 0.9
+) -> pd.DataFrame:
     """
     Return dataframe with items of each dataset selected.
 
@@ -75,24 +115,31 @@ def get_dataframe(datasets: list[str], datasets_path: str) -> pd.DataFrame:
     :param datasets_path: Path to the folder with datasets. The folder structure
     must contain the names available for 'datasets', and each dataset must have
     a csv file named 'metadata.csv' and a folder with the images named 'images'
+    :param seed: Value for reproducible results
+    :param split: Quantity to maintain in training dataframe
     :return dataframe: A DataFrame object containing the targets and paths.
     """
     func = {"inbreast": get_inbreast}
-    entire_df = pd.DataFrame(columns=["target", "path"])
+    total_df = pd.DataFrame(columns=["target", "path", "dataset"])
 
     # -- merge all datasets
     for dataset in datasets:
+        logger.info(f"Loading dataset {dataset}")
         dataset_path = os.path.join(datasets_path, dataset)
         if not os.path.exists(dataset_path):
             logger.error(f"Path {dataset_path} does not exist")
             sys.exit()
+
         dataset_df = func[dataset](
             os.path.join(dataset_path, "metadata.csv"),
             os.path.join(dataset_path, "images"),
         )
-        entire_df = pd.concat([entire_df, dataset_df], ignore_index=True)
+        dataset_df["dataset"] = dataset
+        total_df = pd.concat([total_df, dataset_df], ignore_index=True)
 
-    return entire_df
+    total_df["target"] = total_df["target"].astype(int)
+    total_df["path"] = total_df["path"].astype(str)
+    return split_dataset(total_df, split, seed)
 
 
 def get_dataloader(
@@ -113,12 +160,20 @@ def get_dataloader(
     :param shuffle: Whether to shuffle the data before creating the dataloader
     :
     """
+    num_samples = len(dataset)
     samplers = {
-        # "weightened": WeightedRandomSampler(dataset, ),
-        # "random": RandomSampler,
-        # "sequential": SequentialSampler,
-        "": None
+        "weightened": WeightedRandomSampler(
+            weights=dataset.weights(), num_samples=num_samples
+        ),
+        "random": RandomSampler(data_source=dataset, num_samples=num_samples),
+        "sequential": SequentialSampler(data_source=dataset),
     }
-    sampler = samplers[sampler_cfg]
-    dataloader = DataLoader(dataset, batch_size, shuffle, sampler, num_workers=workers)
+    sampler = samplers.get(sampler_cfg, None)
+    dataloader = DataLoader(
+        dataset=dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        sampler=sampler,
+        num_workers=workers,
+    )
     return dataloader

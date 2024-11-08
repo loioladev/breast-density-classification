@@ -47,6 +47,8 @@ def process_inbreast_image(dicom_path: str, output: str, dicom_ids: set[str]) ->
     image, _ = recort_breast_morp(image)
 
     # -- save image in format filename_laterality_view.png
+    if split_name[4] == "ML":
+        split_name[4] = "MLO"
     filename = f"{split_name[0]}_{split_name[3]}_{split_name[4]}.png"
     cv2.imwrite(os.path.join(output, filename), image)
 
@@ -100,6 +102,9 @@ def process_csv(csv_path: str, output: str) -> pd.DataFrame:
     df = df[["filename", "laterality", "view", "density"]]
     df.dropna(subset=["filename", "density"], inplace=True)
 
+    # -- remove views not in mlo or cc
+    df = df[df["view"].isin(["MLO", "CC"])]
+
     # -- convert columns to correct format
     df["filename"] = df["filename"].astype(int)
     df["density"] = df["density"].apply(lambda x: str(x).strip())
@@ -149,7 +154,7 @@ def get_inbreast(csv_path: str, image_path: str) -> pd.DataFrame:
     df["target"] = df["density"].apply(lambda x: int(x) - 1)
     df["path"] = df.apply(
         lambda row: os.path.join(
-            image_path, f"{row['filename']}_{row['laterality']}_{row['view']}.dcm"
+            image_path, f"{row['filename']}_{row['laterality']}_{row['view']}.png"
         ),
         axis=1,
     )

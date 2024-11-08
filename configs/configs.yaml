@@ -1,13 +1,19 @@
 meta:
     seed: 42
+    load_checkpoint: True
+    model_name: 'resnet50'
+    training_folder: './runs'
+
+augmentation:
+    height: 336
+    width: 224
 
 data:
-    datasets_path: '/home/loioladev/git/breast-density-classification/data'       # path to structured folder of datasets
-    datasets: ['inbreast']  # available datasets ['inbreast']
-    sampler: ''   # choose between ['weightened', 'random', 'sequential']
+    datasets_path: '/home/loioladev/git/breast-density-classification/data'       
+    datasets: ['inbreast']
+    sampler: 'weightened'
     batch_size: 8
     workers: 4
 
 logging:
-    folder: './logs'
     level: 'INFO'
