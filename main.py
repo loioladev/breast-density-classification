@@ -73,7 +73,7 @@ def convert(dataset: str, path: str, output: str, processes: int) -> None:
     :param output: Path to the output directory
     :param processes: Number of processes to use
     """
-    logging.basicConfig(format=LOGGER_FORMAT)
+    logging.basicConfig(format=LOGGER_FORMAT, datefmt="%Y-%m-%d %H:%M:%S")
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
@@ -88,7 +88,7 @@ def train(fname: str) -> None:
 
     :param fname: name of config file to load
     """
-    logging.basicConfig(format=LOGGER_FORMAT)
+    logging.basicConfig(format=LOGGER_FORMAT, datefmt="%Y-%m-%d %H:%M:%S")
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 

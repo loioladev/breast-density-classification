@@ -7,9 +7,11 @@ import logging
 import os
 import sys
 
+import cv2
 import numpy as np
 import pandas as pd
 from pydicom.pixels import pixel_array
+from sklearn.model_selection import train_test_split
 from torch.utils.data import (
     DataLoader,
     Dataset,
@@ -17,8 +19,6 @@ from torch.utils.data import (
     SequentialSampler,
     WeightedRandomSampler,
 )
-from sklearn.model_selection import train_test_split
-import cv2
 
 from src.datasets.inbreast import get_inbreast
 

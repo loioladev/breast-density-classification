@@ -2,13 +2,14 @@ import logging
 import os
 
 import torch
-from torchvision.transforms import v2
 import yaml
+from torchvision.transforms import v2
 
 from src.datasets.dataloader import ImageDataset, get_dataframe, get_dataloader
 from src.utils.config import set_device, set_seed
 from src.utils.logging import CSVLogger
 from src.utils.plotting import visualize_dataloader
+from src.models import ModelFactory
 
 logger = logging.getLogger()
 
@@ -38,6 +39,12 @@ def main(args: dict) -> None:
     folders = os.listdir(training_folder)
     log_folder = os.path.join(training_folder, "training_" + str(len(folders) + 1))
     os.makedirs(log_folder, exist_ok=True)
+
+    # -- MODEL
+    task_type = args["model"]["task_type"]
+    model_name = args["model"]["name"]
+    model_size = args["model"]["size"]
+    pretrained = args["model"]["pretrained"]
 
     # -- AUGMENTATION
     height = args["augmentation"]["height"]
@@ -87,6 +94,11 @@ def main(args: dict) -> None:
     )
 
     # -- load model
+    factory = ModelFactory()
+    model = factory.get_model(model_name, task_type, pretrained, model_size=model_size)
+    logger.info(f"Model {model_name} loaded successfully")
+    print(model)
+
 
     # -- load optimizer and scheduler
 
