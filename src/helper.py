@@ -18,7 +18,7 @@ def get_transformations(res: tuple) -> None:
                 v2.ToDtype(torch.float32, scale=True),
             ],
         ),
-        "val": v2.compose(
+        "val": v2.Compose(
             [
                 v2.ToImage(),
                 v2.Resize(res),
