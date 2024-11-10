@@ -97,7 +97,11 @@ class ModelFactory:
             logger.error(f"Task type {task_type} not supported")
             sys.exit(1)
 
-        model = builder.build(num_classes, model_size=kwargs.get("model_size", None), pretrained=pretrained)
+        model = builder.build(
+            num_classes,
+            model_size=kwargs.get("model_size", None),
+            pretrained=pretrained,
+        )
 
         # -- add sigmoid for binary classification
         if task_type == "binary":

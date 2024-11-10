@@ -3,15 +3,17 @@ This module contains the functions to configure some of the global varibales to
 be used in the training process.
 """
 
+import logging
 import random
+import sys
 
 import numpy
 import torch
 import torch.nn as nn
+from focal_loss.focal_loss import (
+    FocalLoss,  # https://github.com/mathiaszinnen/focal_loss_torch
+)
 from torch.optim import Optimizer, lr_scheduler
-import logging
-import sys
-from focal_loss.focal_loss import FocalLoss # https://github.com/mathiaszinnen/focal_loss_torch
 
 logger = logging.getLogger()
 
@@ -40,7 +42,9 @@ class ConfigManager:
         return optimizer
 
     @staticmethod
-    def get_scheduler(optimizer: Optimizer, scheduler: str, args: dict) -> torch.optim.lr_scheduler._LRScheduler:
+    def get_scheduler(
+        optimizer: Optimizer, scheduler: str, args: dict
+    ) -> torch.optim.lr_scheduler._LRScheduler:
         """
         Get scheduler instance
 
@@ -59,7 +63,7 @@ class ConfigManager:
         if scheduler not in schedulers:
             logger.error(f"Scheduler {scheduler} not implemented")
             sys.exit(1)
-        
+
         scheduler = schedulers[scheduler](optimizer, **args)
         return scheduler
 
@@ -76,17 +80,17 @@ class ConfigManager:
         losses = {
             "cross_entropy": nn.CrossEntropyLoss,
             "mse": nn.MSELoss,
-            "focal": FocalLoss
+            "focal": FocalLoss,
         }
         if loss not in losses:
             logger.error(f"Loss {loss} not implemented")
             sys.exit(1)
-        
-        if loss == 'cross_entropy' and not args['weight']:
-            del args['weight']
+
+        if loss == "cross_entropy" and not args["weight"]:
+            del args["weight"]
         # TODO: review this line, improving it
-        if loss == 'focal':
-            args['weights'] = torch.tensor(weights).to(set_device())
+        if loss == "focal":
+            args["weights"] = torch.tensor(weights).to(set_device())
 
         loss = losses[loss](**args)
         return loss
