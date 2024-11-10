@@ -58,7 +58,8 @@ class ImageDataset(Dataset):
         if image_path.endswith(".dcm"):
             image = pixel_array(image_path)
         else:
-            image = cv2.imread(image_path, cv2.IMREAD_ANYCOLOR)
+            image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
 
         # -- get label
         label = row["target"]

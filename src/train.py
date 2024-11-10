@@ -6,10 +6,10 @@ import yaml
 from torchvision.transforms import v2
 
 from src.datasets.dataloader import ImageDataset, get_dataframe, get_dataloader
-from src.utils.config import set_device, set_seed, ConfigManager
+from src.models import ModelFactory
+from src.utils.config import ConfigManager, set_device, set_seed
 from src.utils.logging import CSVLogger
 from src.utils.plotting import visualize_dataloader
-from src.models import ModelFactory
 
 logger = logging.getLogger()
 
@@ -86,7 +86,6 @@ def main(args: dict) -> None:
     visualize_dataloader(
         dataloader, {0: "A", 1: "B", 2: "C", 3: "D"}, dataloader_visual
     )
-    logger.info(f"Dataloader visualization saved in {dataloader_visual}")
     # ----------------------------------------------------------------------- #
 
     # -- save parameters
@@ -110,8 +109,8 @@ def main(args: dict) -> None:
     # TODO: load model from checkpoint
 
     # -- load optimizer
-    optimizer_config = args["optimizer"].get(optimizer_type, 'adamw')
-    optimizer_config['weight_decay'] = args["optimizer"]["weight_decay"]
+    optimizer_config = args["optimizer"].get(optimizer_type, "adamw")
+    optimizer_config["weight_decay"] = args["optimizer"]["weight_decay"]
     optimizer = ConfigManager.get_optimizer(model, optimizer_type, optimizer_config)
     logger.info(f"Optimizer {optimizer_type} loaded")
 
@@ -120,7 +119,9 @@ def main(args: dict) -> None:
     if schuduler_type:
         scheduler_config = args["scheduler"].get(schuduler_type, {})
         del scheduler_config["metric"]
-        scheduler = ConfigManager.get_scheduler(optimizer, schuduler_type, scheduler_config)
+        scheduler = ConfigManager.get_scheduler(
+            optimizer, schuduler_type, scheduler_config
+        )
         logger.info(f"Scheduler {schuduler_type} loaded")
 
     # -- load loss
