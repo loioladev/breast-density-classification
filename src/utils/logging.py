@@ -1,3 +1,6 @@
+import os
+
+
 class CSVLogger(object):
     """
     Class to handle the logging of the metrics
@@ -30,3 +33,19 @@ class CSVLogger(object):
             for i, tv in enumerate(zip(self.types, argv), 1):
                 end = "," if i < len(argv) else "\n"
                 print(tv[0] % tv[1], end=end, file=f)
+
+
+def create_folder(folder: str, experiment_name: str = 'training') -> str:
+    """
+    Create a folder with the experiment name
+
+    :param folder: The path to the folder to create the new folder
+    :param experiment_name: The name of the experiment
+    :return: The path to the new folder
+    """
+    os.makedirs(folder, exist_ok=True)
+    folders = os.listdir(folder)
+    experiment_len = len([f for f in folders if f.startswith(experiment_name)])
+    log_folder = os.path.join(folder, f'{experiment_name}_{str(experiment_len + 1)}')
+    os.makedirs(log_folder, exist_ok=True)
+    return log_folder

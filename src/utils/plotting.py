@@ -46,7 +46,7 @@ def visualize_dataloader(dataloader: DataLoader, id_to_label: dict, path: str) -
     ax.set_xlabel("Batch")
     ax.set_ylabel("Count")
     ax.legend()
-    plt.savefig(path)
+    plt.savefig(path + "/dataloader_distribution.png")
     plt.close()
     logger.info(f"Distribution of data visualization saved at {path}")
 
@@ -64,7 +64,6 @@ def visualize_dataloader(dataloader: DataLoader, id_to_label: dict, path: str) -
         axes[idx].axis("off")
 
     plt.subplots_adjust(wspace=0.05, hspace=0.02)
-    image_path = path.replace("dataloader", "example_batch")
-    plt.savefig(image_path)
+    plt.savefig(path + "/dataloader_images.png")
     plt.close()
     logger.info(f"Batch visualization saved at {path}")

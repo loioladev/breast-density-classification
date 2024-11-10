@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 import pandas as pd
 from pydicom.pixels import pixel_array
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import (
     DataLoader,
     Dataset,
@@ -178,3 +178,27 @@ def get_dataloader(
         num_workers=workers,
     )
     return dataloader
+
+
+def cross_validation(dataframe: pd.DataFrame, seed: int, folds: int = 5, id_to_label: dict = {}) -> list:
+    """
+    Define the k-folds for the dataset, where each patient is in only one fold.
+    :param dataframe: The dataset.
+    :return: The dataset with the folds
+    """
+    # -- create new column "fold"
+    dataframe = dataframe.copy()
+    dataframe["fold"] = -1
+    skf = StratifiedKFold(n_splits=folds, shuffle=True, random_state=seed)
+    for fold, (_, val_) in enumerate(skf.split(X=dataframe, y=dataframe.target)):
+        dataframe.loc[val_, "fold"] = fold
+
+    # -- print distribution of classes in each fold
+    logger.info("Printing distribution of classes in each fold")
+    for fold in range(folds):
+        values = dataframe[dataframe["fold"] == fold]["target"].values
+        classes, counts = np.unique(values, return_counts=True)
+        distribution = ' '.join([f"{id_to_label.get(_cls, _cls)} - {cnt} |" for _cls, cnt in zip(classes, counts)])
+        logger.info(f"Fold {fold}: {distribution}")
+
+    return dataframe

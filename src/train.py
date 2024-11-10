@@ -1,14 +1,18 @@
 import logging
 import os
 
-import torch
 import yaml
-from torchvision.transforms import v2
 
-from src.datasets.dataloader import ImageDataset, get_dataframe, get_dataloader
+from src.datasets.dataloader import (
+    ImageDataset,
+    cross_validation,
+    get_dataframe,
+    get_dataloader,
+)
+from src.helper import get_transformations
 from src.models import ModelFactory
 from src.utils.config import ConfigManager, set_device, set_seed
-from src.utils.logging import CSVLogger
+from src.utils.logging import CSVLogger, create_folder
 from src.utils.plotting import visualize_dataloader
 
 logger = logging.getLogger()
@@ -23,23 +27,18 @@ def main(args: dict) -> None:
     # -- set device
     device = set_device()
     logger.info(f"Device set to {device}")
+    id_to_label = {0: "A", 1: "B", 2: "C", 3: "D"}
 
     # ----------------------------------------------------------------------- #
     #  PASSED IN PARAMS FROM CONFIG FILE
     # ----------------------------------------------------------------------- #
 
-    # -- SEED
+    # -- META
     seed = args["meta"]["seed"]
-    set_seed(seed)
-    logger.info(f"Seed set to {seed} for reproducible results")
-
-    # -- FOLDERS
-    # TODO: create folder with the experiment name
     training_folder = args["meta"]["training_folder"]
-    os.makedirs(training_folder, exist_ok=True)
-    folders = os.listdir(training_folder)
-    log_folder = os.path.join(training_folder, "training_" + str(len(folders) + 1))
-    os.makedirs(log_folder, exist_ok=True)
+    experiment_name = args["meta"]["experiment_name"]
+    checkpoint_dir = args["meta"]["checkpoint_dir"]
+    kfolds = args["meta"]["kfolds"]
 
     # -- MODEL
     task_type = args["model"]["task_type"]
@@ -59,34 +58,20 @@ def main(args: dict) -> None:
     height = args["augmentation"]["height"]
     width = args["augmentation"]["width"]
 
-    # TODO: add new transformations, and split in train and test
-    transforms = v2.Compose(
-        [
-            v2.ToImage(),
-            v2.Resize((height, width)),
-            v2.ToDtype(torch.float32, scale=True),
-        ]
-    )
-
     # -- DATA
     datasets_path = args["data"]["datasets_path"]
     datasets = args["data"]["datasets"]
     sampler = args["data"]["sampler"]
     batch_size = args["data"]["batch_size"]
     workers = args["data"]["workers"]
-
-    train_df, test_df = get_dataframe(datasets, datasets_path, seed)
-    logger.info("Datasets loaded")
-
-    train_class = ImageDataset(train_df, transform=transforms)
-    dataloader = get_dataloader(train_class, batch_size, sampler, workers=workers)
-    logger.info("Dataloader loaded")
-
-    dataloader_visual = os.path.join(log_folder, "dataloader.png")
-    visualize_dataloader(
-        dataloader, {0: "A", 1: "B", 2: "C", 3: "D"}, dataloader_visual
-    )
     # ----------------------------------------------------------------------- #
+
+    # -- configure seed
+    set_seed(seed)
+    logger.info(f"Seed set to {seed} for reproducible results")
+
+    # -- create training folder
+    log_folder = create_folder(training_folder, experiment_name)
 
     # -- save parameters
     dump = os.path.join(log_folder, "params.yaml")
@@ -102,9 +87,23 @@ def main(args: dict) -> None:
         ("%d", "time (min)"),
     )
 
+    # -- transformations
+    transformations = get_transformations((height, width))
+
+    # -- load datasets
+    train_df, test_df = get_dataframe(datasets, datasets_path, seed)
+    train_df = cross_validation(train_df, seed, kfolds, id_to_label)
+    logger.info("Datasets loaded")
+
+    # -- check dataloader
+    train_class = ImageDataset(train_df, transform=transformations["train"])
+    dataloader = get_dataloader(train_class, batch_size, sampler, workers=workers)
+    visualize_dataloader(dataloader, id_to_label, log_folder)
+
     # -- load model
     factory = ModelFactory()
     model = factory.get_model(model_name, task_type, pretrained, model_size=model_size)
+    model = model.to(device)
     logger.info(f"Model {model_name}{model_size} loaded")
     # TODO: load model from checkpoint
 
