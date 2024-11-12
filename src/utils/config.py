@@ -14,6 +14,15 @@ from focal_loss.focal_loss import (
     FocalLoss,  # https://github.com/mathiaszinnen/focal_loss_torch
 )
 from torch.optim import Optimizer, lr_scheduler
+from torchmetrics import (
+    AUROC,
+    Accuracy,
+    ConfusionMatrix,
+    F1Score,
+    MetricCollection,
+    Precision,
+    Recall,
+)
 
 logger = logging.getLogger()
 
@@ -94,6 +103,32 @@ class ConfigManager:
 
         loss = losses[loss](**args)
         return loss
+
+    @staticmethod
+    def get_metrics(metrics: list, args: dict) -> MetricCollection:
+        """
+        Get metrics instances
+
+        :param metrics: The metrics names
+
+        :return metrics: The metric collection instance
+        """
+        metrics = {}
+        metrics_fn = {
+            "precision": Precision,
+            "recall": Recall,
+            "f1": F1Score,
+            "accuracy": Accuracy,
+            "auroc": AUROC,
+            "confusion": ConfusionMatrix,
+        }
+        for metric in metrics:
+            if metric not in metrics_fn:
+                logger.error(f"Metric {metric} not implemented")
+                sys.exit(1)
+            metrics[metric] = metrics_fn[metric](**args)
+        metrics = MetricCollection(metrics)
+        return metrics
 
 
 def set_seed(seed: int) -> None:

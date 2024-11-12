@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 
 import yaml
 
@@ -9,7 +10,7 @@ from src.datasets.dataloader import (
     get_dataframe,
     get_dataloader,
 )
-from src.helper import get_transformations
+from src.helper import get_transformations, Training
 from src.models import ModelFactory
 from src.utils.config import ConfigManager, set_device, set_seed
 from src.utils.logging import CSVLogger, create_folder
@@ -35,13 +36,16 @@ def main(args: dict) -> None:
 
     # -- META
     seed = args["meta"]["seed"]
+    task_type = args["meta"]["task_type"]
     training_folder = args["meta"]["training_folder"]
     experiment_name = args["meta"]["experiment_name"]
     checkpoint_dir = args["meta"]["checkpoint_dir"]
     kfolds = args["meta"]["kfolds"]
+    metric_types = args["meta"]["metrics"]["types"]
+    main_metric = args["meta"]["metrics"]["main"]
+    metric_reduction = args["meta"]["metrics"]["reduction"]
 
     # -- MODEL
-    task_type = args["model"]["task_type"]
     model_name = args["model"]["name"]
     model_size = args["model"]["size"]
     pretrained = args["model"]["pretrained"]
@@ -78,14 +82,6 @@ def main(args: dict) -> None:
     with open(dump, "w") as f:
         yaml.dump(args, f)
         logger.info(f"Training parameters stored in {dump}")
-
-    # -- make csv logger
-    csv_logger = CSVLogger(
-        os.path.join(log_folder, "metrics.csv"),
-        ("%d", "epoch"),
-        ("%.5f", "loss"),
-        ("%d", "time (min)"),
-    )
 
     # -- transformations
     transformations = get_transformations((height, width))
@@ -129,4 +125,57 @@ def main(args: dict) -> None:
     loss = ConfigManager.get_loss(loss_type, loss_weights, loss_config)
     logger.info(f"Loss {loss_type} loaded")
 
-    # -- training loop
+    # -- load metrics
+    metric_args = {"task": task_type}
+    if task_type == "multiclass":
+        metric_args["num_classes"] = len(id_to_label)
+        metric_args["average"] = metric_reduction
+    metrics = ConfigManager.get_metrics(metric_types, metric_args)
+
+    # ----------------------------------------------------------------------- #
+    #  MODEL TRAINING
+    # ----------------------------------------------------------------------- #
+    since = time.time()
+    model_start = model.state_dict()
+    optimizer_start = optimizer.state_dict()
+    scheduler_start = scheduler.state_dict() if scheduler else None
+    for fold in range(kfolds):
+        logger.info(f"Fold {fold+1}/{kfolds}")
+
+        # -- reset objects
+        model.load_state_dict(model_start)
+        optimizer.load_state_dict(optimizer_start)
+        if scheduler:
+            scheduler.load_state_dict(scheduler_start)
+
+        # -- create dataloaders
+        fold_train_df = train_df[train_df["fold"] != fold]
+        fold_val_df = train_df[train_df["fold"] == fold]
+        train_class = ImageDataset(fold_train_df, transform=transformations["train"])
+        val_class = ImageDataset(fold_val_df, transform=transformations["val"])
+        train_loader = get_dataloader(train_class, batch_size, sampler, workers=workers)
+        val_loader = get_dataloader(val_class, batch_size, workers=workers)
+        dataloaders = {"train": train_loader, "val": val_loader}
+
+        folder_path = os.path.join(log_folder, f"fold_{fold}")
+
+        # -- make csv logger
+        csv_logger = CSVLogger(
+            folder_path,
+            ("%d", "epoch"),
+            ("%.5f", "loss"),
+            ("%d", "time"),
+            *[("%.2f", m) for m in metric_types if m not in ["confusion"]],
+        )
+
+        # -- run training
+        training = Training(
+            model,
+            csv_logger,
+            loss,
+            optimizer,
+            scheduler,
+            folder_path,
+            )
+        training.train(epochs, metrics, dataloaders)
+    logger.info(f"Training completed in {time.time() - since:.2f}s")

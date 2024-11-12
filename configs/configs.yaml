@@ -1,12 +1,15 @@
 meta:
+  task_type: 'binary'
   training_folder: './runs'
   experiment_name: 'breast_density_classification'
   checkpoint_dir: ''
   seed: 42
   kfolds: 3
+  metrics: 
+    types: ['accuracy', 'f1', 'auroc', 'precision', 'recall', 'confusion']
+    reduction: 'weighted'
   
 model:
-  task_type: 'binary'
   name: 'resnet'
   size: 50
   pretrained: True
