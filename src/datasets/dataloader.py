@@ -180,7 +180,9 @@ def get_dataloader(
     return dataloader
 
 
-def cross_validation(dataframe: pd.DataFrame, seed: int, folds: int = 5, id_to_label: dict = {}) -> list:
+def cross_validation(
+    dataframe: pd.DataFrame, seed: int, folds: int = 5, id_to_label: dict = {}
+) -> list:
     """
     Define the k-folds for the dataset, where each patient is in only one fold.
     :param dataframe: The dataset.
@@ -198,7 +200,12 @@ def cross_validation(dataframe: pd.DataFrame, seed: int, folds: int = 5, id_to_l
     for fold in range(folds):
         values = dataframe[dataframe["fold"] == fold]["target"].values
         classes, counts = np.unique(values, return_counts=True)
-        distribution = ' '.join([f"{id_to_label.get(_cls, _cls)} - {cnt} |" for _cls, cnt in zip(classes, counts)])
+        distribution = " ".join(
+            [
+                f"{id_to_label.get(_cls, _cls)} - {cnt} |"
+                for _cls, cnt in zip(classes, counts)
+            ]
+        )
         logger.info(f"Fold {fold}: {distribution}")
 
     return dataframe

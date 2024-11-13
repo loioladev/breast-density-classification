@@ -22,7 +22,7 @@ class CSVLogger(object):
         self.header(self.train_path, argv)
         self.header(self.val_path, argv)
 
-    def header(self, path: str, *argv: list) -> None:
+    def header(self, path: str, argv: list) -> None:
         """
         Create the header of the metrics file
 
@@ -31,7 +31,6 @@ class CSVLogger(object):
         with open(path, "+a") as f:
             for i, v in enumerate(argv, 1):
                 print(v[1], end="," if i < len(argv) else "\n", file=f)
-        return
 
     def log(self, phase: str, *argv: list) -> None:
         """

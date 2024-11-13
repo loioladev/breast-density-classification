@@ -42,7 +42,6 @@ def main(args: dict) -> None:
     checkpoint_dir = args["meta"]["checkpoint_dir"]
     kfolds = args["meta"]["kfolds"]
     metric_types = args["meta"]["metrics"]["types"]
-    main_metric = args["meta"]["metrics"]["main"]
     metric_reduction = args["meta"]["metrics"]["reduction"]
 
     # -- MODEL
@@ -140,7 +139,7 @@ def main(args: dict) -> None:
     optimizer_start = optimizer.state_dict()
     scheduler_start = scheduler.state_dict() if scheduler else None
     for fold in range(kfolds):
-        logger.info(f"Fold {fold+1}/{kfolds}")
+        logger.info(f"Starting training on fold {fold+1}/{kfolds}")
 
         # -- reset objects
         model.load_state_dict(model_start)
@@ -158,6 +157,7 @@ def main(args: dict) -> None:
         dataloaders = {"train": train_loader, "val": val_loader}
 
         folder_path = os.path.join(log_folder, f"fold_{fold}")
+        os.makedirs(folder_path, exist_ok=True)
 
         # -- make csv logger
         csv_logger = CSVLogger(
@@ -176,6 +176,6 @@ def main(args: dict) -> None:
             optimizer,
             scheduler,
             folder_path,
-            )
+        )
         training.train(epochs, metrics, dataloaders)
     logger.info(f"Training completed in {time.time() - since:.2f}s")
