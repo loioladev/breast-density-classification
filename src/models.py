@@ -31,9 +31,11 @@ class BaseModelBuilder(ABC):
         :param num_classes: The number of classes for the model
         :return model: The model instance with the last layer modified
         """
+        layer = None
         if hasattr(model, "fc"):
             in_features = model.fc.in_features
             model.fc = nn.Linear(in_features, num_classes)
+            layer = "fc"
         elif hasattr(model, "classifier"):
             if isinstance(model.classifier, nn.Linear):
                 in_features = model.classifier.in_features
@@ -41,6 +43,8 @@ class BaseModelBuilder(ABC):
             elif isinstance(model.classifier, nn.Sequential):
                 in_features = model.classifier[-1].in_features
                 model.classifier[-1] = nn.Linear(in_features, num_classes)
+            layer = "classifier"
+        logger.debug(f"Last layer of attribute {layer} modified to {num_classes} classes")
         return model
 
 
@@ -66,7 +70,8 @@ class ResNetBuilder(BaseModelBuilder):
         # -- get the model from torchvision and modify last layer
         model_fn = getattr(models, f"resnet{model_size}")
         model = model_fn(weights="DEFAULT" if pretrained else None)
-        return self.modify_last_layer(model, num_classes)
+        model = self.modify_last_layer(model, num_classes)
+        return model
 
 
 class ModelFactory:

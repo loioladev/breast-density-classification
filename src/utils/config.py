@@ -87,7 +87,7 @@ class ConfigManager:
         :return loss: The loss function instance
         """
         losses = {
-            "cross_entropy": nn.CrossEntropyLoss,
+            "ce": nn.CrossEntropyLoss,
             "mse": nn.MSELoss,
             "focal": FocalLoss,
         }

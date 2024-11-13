@@ -57,8 +57,9 @@ class Training:
         scheduler: torch.optim.lr_scheduler._LRScheduler,
         log_path: Path,
     ) -> None:
-        self.model = model
-        self.criterion = criterion
+        device = set_device()
+        self.model = model.to(device)
+        self.criterion = criterion.to(device)
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.csv_logger = csv_logger
@@ -84,9 +85,9 @@ class Training:
         val_metrics = metrics.clone(prefix="val_").to(device)
 
         # -- iterate over the epochs
-        for epoch in epochs:
+        for epoch in range(epochs):
             since_epoch = time.time()
-            logger.info(f"Epoch {epoch}/{self.epochs}")
+            logger.info(f"Epoch {epoch}/{epochs}")
 
             train_loss_res, train_metrics_res = self.run_epoch(
                 "train", dataloaders["train"], train_metrics
@@ -141,13 +142,14 @@ class Training:
         """
         # -- initialize variables
         running_loss = 0.0
+        device = set_device()
         self.model.train() if phase == "train" else self.model.eval()
         metrics.train() if phase == "train" else metrics.eval()
 
         # -- iterate over the dataloader
         for inputs, labels in tqdm(dataloader, desc=f"{phase}"):
-            inputs = inputs.to(self.device)
-            labels = labels.to(self.device)
+            inputs = inputs.to(device)
+            labels = labels.to(device)
 
             # -- forward operation
             with torch.set_grad_enabled(phase == "train"):

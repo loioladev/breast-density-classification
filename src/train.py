@@ -132,50 +132,70 @@ def main(args: dict) -> None:
     metrics = ConfigManager.get_metrics(metric_types, metric_args)
 
     # ----------------------------------------------------------------------- #
-    #  MODEL TRAINING
+    #  BINARY MODEL TRAINING
     # ----------------------------------------------------------------------- #
-    since = time.time()
-    model_start = model.state_dict()
-    optimizer_start = optimizer.state_dict()
-    scheduler_start = scheduler.state_dict() if scheduler else None
-    for fold in range(kfolds):
-        logger.info(f"Starting training on fold {fold+1}/{kfolds}")
+    since_binary = time.time()
+    for target in train_df["target"].unique():
 
-        # -- reset objects
-        model.load_state_dict(model_start)
-        optimizer.load_state_dict(optimizer_start)
-        if scheduler:
-            scheduler.load_state_dict(scheduler_start)
+        logger.info(f"Starting training for target {target}")
 
-        # -- create dataloaders
-        fold_train_df = train_df[train_df["fold"] != fold]
-        fold_val_df = train_df[train_df["fold"] == fold]
-        train_class = ImageDataset(fold_train_df, transform=transformations["train"])
-        val_class = ImageDataset(fold_val_df, transform=transformations["val"])
-        train_loader = get_dataloader(train_class, batch_size, sampler, workers=workers)
-        val_loader = get_dataloader(val_class, batch_size, workers=workers)
-        dataloaders = {"train": train_loader, "val": val_loader}
+        # -- create a binary dataframe for the target
+        binary_df = train_df.copy()
+        binary_df["target"] = binary_df["target"].apply(lambda x: 1 if x == target else 0)
 
-        folder_path = os.path.join(log_folder, f"fold_{fold}")
-        os.makedirs(folder_path, exist_ok=True)
+        # -- initialize folder
+        binary_folder = os.path.join(log_folder, f"{target}")
+        os.makedirs(binary_folder, exist_ok=True)
+        logger.debug(f"Binary folder created at {binary_folder}")
 
-        # -- make csv logger
-        csv_logger = CSVLogger(
-            folder_path,
-            ("%d", "epoch"),
-            ("%.5f", "loss"),
-            ("%d", "time"),
-            *[("%.2f", m) for m in metric_types if m not in ["confusion"]],
-        )
+        # -- initialize variables
+        since = time.time()
+        model_start = model.state_dict()
+        optimizer_start = optimizer.state_dict()
+        scheduler_start = scheduler.state_dict() if scheduler else None
 
-        # -- run training
-        training = Training(
-            model,
-            csv_logger,
-            loss,
-            optimizer,
-            scheduler,
-            folder_path,
-        )
-        training.train(epochs, metrics, dataloaders)
-    logger.info(f"Training completed in {time.time() - since:.2f}s")
+        for fold in range(kfolds):
+            logger.info(f"Training of fold {fold+1}/{kfolds}")
+
+            # -- reset objects
+            model.load_state_dict(model_start)
+            optimizer.load_state_dict(optimizer_start)
+            if scheduler:
+                scheduler.load_state_dict(scheduler_start)
+
+            # -- create dataloaders
+            fold_train_df = binary_df[binary_df["fold"] != fold]
+            fold_val_df = binary_df[binary_df["fold"] == fold]
+            train_class = ImageDataset(fold_train_df, transform=transformations["train"])
+            val_class = ImageDataset(fold_val_df, transform=transformations["val"])
+            train_loader = get_dataloader(train_class, batch_size, sampler, workers=workers)
+            val_loader = get_dataloader(val_class, batch_size, workers=workers)
+            dataloaders = {"train": train_loader, "val": val_loader}
+            logger.debug("Dataloaders created with sizes")
+            for key, value in dataloaders.items():
+                logger.debug(f"{key}: {len(value.dataset)}")
+
+            folder_path = os.path.join(binary_folder, f"fold_{fold}")
+            os.makedirs(folder_path, exist_ok=True)
+
+            # -- make csv logger
+            csv_logger = CSVLogger(
+                folder_path,
+                ("%d", "epoch"),
+                ("%.5f", "loss"),
+                ("%d", "time"),
+                *[("%.2f", m) for m in metric_types if m not in ["confusion"]],
+            )
+
+            # -- run training
+            training = Training(
+                model,
+                csv_logger,
+                loss,
+                optimizer,
+                scheduler,
+                folder_path,
+            )
+            training.train(epochs, metrics, dataloaders)
+        logger.info(f"Training of {target} model completed in {time.time() - since:.2f}s")
+    logger.info(f"Binary training completed in {time.time() - since_binary:.2f}s")
