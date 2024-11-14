@@ -83,7 +83,7 @@ def main(args: dict) -> None:
         logger.info(f"Training parameters stored in {dump}")
 
     # -- transformations
-    transformations = get_transformations((height, width))
+    transformations, target_transformations = get_transformations((height, width))
 
     # -- load datasets
     train_df, test_df = get_dataframe(datasets, datasets_path, seed)
@@ -135,8 +135,9 @@ def main(args: dict) -> None:
     #  BINARY MODEL TRAINING
     # ----------------------------------------------------------------------- #
     since_binary = time.time()
-    for target in train_df["target"].unique():
-
+    targets = train_df["target"].unique().tolist()
+    targets = sorted(targets)
+    for target in targets:
         logger.info(f"Starting training for target {target}")
 
         # -- create a binary dataframe for the target
@@ -166,8 +167,8 @@ def main(args: dict) -> None:
             # -- create dataloaders
             fold_train_df = binary_df[binary_df["fold"] != fold]
             fold_val_df = binary_df[binary_df["fold"] == fold]
-            train_class = ImageDataset(fold_train_df, transform=transformations["train"])
-            val_class = ImageDataset(fold_val_df, transform=transformations["val"])
+            train_class = ImageDataset(fold_train_df, transformations["train"], target_transformations["train"])
+            val_class = ImageDataset(fold_val_df, transformations["val"], target_transformations["val"])
             train_loader = get_dataloader(train_class, batch_size, sampler, workers=workers)
             val_loader = get_dataloader(val_class, batch_size, workers=workers)
             dataloaders = {"train": train_loader, "val": val_loader}

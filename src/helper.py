@@ -40,7 +40,11 @@ def get_transformations(res: tuple) -> dict[v2.Compose]:
             ],
         ),
     }
-    return transforms
+    target_transforms = {
+        "train": lambda x: torch.tensor(x, dtype=torch.float32),
+        "val": lambda x: torch.tensor(x, dtype=torch.float32)
+    }
+    return transforms, target_transforms
 
 
 class Training:
@@ -63,7 +67,7 @@ class Training:
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.csv_logger = csv_logger
-        self.log_path = log_path
+        self.log_path = Path(log_path)
 
     def train(
         self, epochs: int, metrics: MetricCollection, dataloaders: dict[DataLoader]
@@ -106,7 +110,9 @@ class Training:
             if val_loss < best_loss:
                 best_loss = val_loss
                 best_epoch = epoch
-                self.save_epoch(is_best=True)
+                self.save_epoch(self.log_path, True, val_loss, epoch)
+                logger.info(f"Model improved with loss {val_loss:.4f}")
+            self.save_epoch(self.log_path, False, val_loss, epoch)
 
             # -- log the results
             time_elapsed = time.time() - since_epoch
@@ -117,9 +123,9 @@ class Training:
             val_metrics_val = self.log_results(val_metrics_res)
 
             self.csv_logger.log(
-                "train", epoch, val_loss, time_elapsed, *train_metrics_val
+                "train", *[epoch, val_loss, time_elapsed, *train_metrics_val]
             )
-            self.csv_logger.log("val", epoch, val_loss, time_elapsed, *val_metrics_val)
+            self.csv_logger.log("val", *[epoch, val_loss, time_elapsed, *val_metrics_val])
 
             train_metrics.reset()
             val_metrics.reset()
@@ -154,7 +160,7 @@ class Training:
             # -- forward operation
             with torch.set_grad_enabled(phase == "train"):
                 outputs = self.model(inputs)
-                loss = self.criterion(outputs, labels)
+                loss = self.criterion(outputs.squeeze(), labels) #TODO: this is only for binary classification
                 if phase == "train":
                     loss.backward()
                     self.optimizer.step()
@@ -177,17 +183,16 @@ class Training:
             "optimizer": self.optimizer.state_dict(),
             "scheduler": self.scheduler.state_dict(),
         }
-        torch.save(training_results, path / "last.pt")
-        logger.info(f"Model saved to {path / 'last.pt'}")
-
-        if is_best:
-            torch.save(training_results, path / "best.pt")
-            logger.info(f"Best model saved to {path / 'best.pt'}")
+        type_save = "best" if is_best else "last"
+        path_save = path / f"{type_save}.pt"
+        torch.save(training_results, path_save)
+        logger.debug(f"Model {type_save} saved to {path_save}")
 
     def log_results(self, metrics: dict) -> list:
         """
         Log the results of the metrics
         """
+        print(metrics)
         values = [(k, metrics[k].item()) for k in metrics.keys()]
         logger.info(
             " | ".join([f"{k}: {v:.4f}" for k, v in values if k not in ["confusion"]])

@@ -88,6 +88,7 @@ class ConfigManager:
         """
         losses = {
             "ce": nn.CrossEntropyLoss,
+            "bce": nn.BCEWithLogitsLoss,
             "mse": nn.MSELoss,
             "focal": FocalLoss,
         }

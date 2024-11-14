@@ -97,11 +97,11 @@ class ModelFactory:
             logger.error(f"Model {model_name} not found")
             sys.exit(1)
 
-        num_classes = 1 if task_type == "binary" else kwargs.get("num_classes", 4)
         if task_type not in ["binary", "multiclass"]:
             logger.error(f"Task type {task_type} not supported")
             sys.exit(1)
 
+        num_classes = 1 if task_type == "binary" else kwargs.get("num_classes", 4)
         model = builder.build(
             num_classes,
             model_size=kwargs.get("model_size", None),
