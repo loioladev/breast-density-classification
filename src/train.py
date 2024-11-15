@@ -180,13 +180,18 @@ def main(args: dict) -> None:
             os.makedirs(folder_path, exist_ok=True)
 
             # -- make csv logger
+            logger_metrics = []
+            for metric_type in metrics:
+                if metric_type in ['confusion']:
+                    logger_metrics.append(("%s", metric_type))
+                    continue
+                logger_metrics.append(("%.5f", metric_type))
             csv_logger = CSVLogger(
                 folder_path,
                 ("%d", "epoch"),
                 ("%.5f", "loss"),
                 ("%d", "time"),
-                *[("%.5f", m) for m in metric_types if 'confusion' not in m],
-                *[("%s", 'confusion_matrix')]
+                *logger_metrics
             )
 
             # -- run training

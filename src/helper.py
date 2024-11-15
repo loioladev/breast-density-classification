@@ -118,14 +118,15 @@ class Training:
             time_elapsed = time.time() - since_epoch
             logger.info(f"Epoch complete in {time_elapsed // 60}m {time_elapsed % 60}s")
 
-            logger.info(f"Train loss: {train_loss_res:.4f} | Val loss: {val_loss:.4f}")
+            logger.info(f"Training loss: {train_loss_res:.5f}")
+            logger.info(f"Validation loss: {val_loss:.5f}")
             train_metrics_val = self.process_metrics(train_metrics_res)
             val_metrics_val = self.process_metrics(val_metrics_res)
 
             self.csv_logger.log(
-                "train", *[epoch, val_loss, time_elapsed, *train_metrics_val]
+                "train", *[epoch, val_loss, time_elapsed, *[value for _, value in train_metrics_val]]
             )
-            self.csv_logger.log("val", *[epoch, val_loss, time_elapsed, *val_metrics_val])
+            self.csv_logger.log("val", *[epoch, val_loss, time_elapsed, *[value for _, value in val_metrics_val]])
 
             train_metrics.reset()
             val_metrics.reset()
@@ -137,7 +138,7 @@ class Training:
 
     def run_epoch(
         self, phase: str, dataloader: dict[DataLoader], metrics: MetricCollection
-    ) -> None:
+    ) -> tuple[float, MetricCollection]:
         """
         Run the epoch for the model
 
@@ -197,12 +198,14 @@ class Training:
         :return: The list of values
         """
         values = []
-        for key in metrics.keys():
+        for key, value in metrics.items():
             if not key.endswith("confusion"):
-                values.append((key, metrics[key].item()))
-                continue
-            confusion_text = str(metrics[key].item())
-            values.append((key, confusion_text.replace(r"\n", " ")))
-        logger.info()
+                values.append((key, value.item()))
+            else:
+                values.append((key, str(value.cpu().tolist()).replace('\n', ' ')))
+
+        # -- log the metrics
+        for key, value in values:
+            logger.debug(f"{key}: {value}")
+
         return values
-    

@@ -10,10 +10,10 @@ meta:
     reduction: 'weighted'
 
 data:
-  datasets_path: '/home/loioladev/git/breast-density-classification/data'       
+  datasets_path: '/home/matheus/Documents/git/breast-density-classification/data'       
   datasets: ['inbreast']
   sampler: 'weightened'
-  batch_size: 12
+  batch_size: 8
   workers: 4
   
 model:
@@ -83,4 +83,4 @@ augmentation:
   width: 224
 
 logging:
-  level: 'INFO'
+  level: 'DEBUG'
