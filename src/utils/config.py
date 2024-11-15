@@ -106,7 +106,7 @@ class ConfigManager:
         return loss
 
     @staticmethod
-    def get_metrics(metrics: list, args: dict) -> MetricCollection:
+    def get_metrics(metrics_types: list, args: dict) -> MetricCollection:
         """
         Get metrics instances
 
@@ -123,7 +123,7 @@ class ConfigManager:
             "auroc": AUROC,
             "confusion": ConfusionMatrix,
         }
-        for metric in metrics:
+        for metric in metrics_types:
             if metric not in metrics_fn:
                 logger.error(f"Metric {metric} not implemented")
                 sys.exit(1)

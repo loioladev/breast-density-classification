@@ -119,8 +119,8 @@ class Training:
             logger.info(f"Epoch complete in {time_elapsed // 60}m {time_elapsed % 60}s")
 
             logger.info(f"Train loss: {train_loss_res:.4f} | Val loss: {val_loss:.4f}")
-            train_metrics_val = self.log_results(train_metrics_res)
-            val_metrics_val = self.log_results(val_metrics_res)
+            train_metrics_val = self.process_metrics(train_metrics_res)
+            val_metrics_val = self.process_metrics(val_metrics_res)
 
             self.csv_logger.log(
                 "train", *[epoch, val_loss, time_elapsed, *train_metrics_val]
@@ -159,8 +159,9 @@ class Training:
 
             # -- forward operation
             with torch.set_grad_enabled(phase == "train"):
-                outputs = self.model(inputs)
-                loss = self.criterion(outputs.squeeze(), labels) #TODO: this is only for binary classification
+                # TODO: this is only for binary classification, squeeze is not general
+                outputs = self.model(inputs).squeeze()
+                loss = self.criterion(outputs, labels) 
                 if phase == "train":
                     loss.backward()
                     self.optimizer.step()
@@ -188,13 +189,20 @@ class Training:
         torch.save(training_results, path_save)
         logger.debug(f"Model {type_save} saved to {path_save}")
 
-    def log_results(self, metrics: dict) -> list:
+    def process_metrics(self, metrics: dict) -> list:
         """
-        Log the results of the metrics
+        Convert metrics to a list of values
+
+        :param metrics: The metrics dictionary
+        :return: The list of values
         """
-        print(metrics)
-        values = [(k, metrics[k].item()) for k in metrics.keys()]
-        logger.info(
-            " | ".join([f"{k}: {v:.4f}" for k, v in values if k not in ["confusion"]])
-        )
+        values = []
+        for key in metrics.keys():
+            if not key.endswith("confusion"):
+                values.append((key, metrics[key].item()))
+                continue
+            confusion_text = str(metrics[key].item())
+            values.append((key, confusion_text.replace(r"\n", " ")))
+        logger.info()
         return values
+    

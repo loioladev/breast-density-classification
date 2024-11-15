@@ -185,7 +185,8 @@ def main(args: dict) -> None:
                 ("%d", "epoch"),
                 ("%.5f", "loss"),
                 ("%d", "time"),
-                *[("%.2f", m) for m in metric_types if m not in ["confusion"]],
+                *[("%.5f", m) for m in metric_types if 'confusion' not in m],
+                *[("%s", 'confusion_matrix')]
             )
 
             # -- run training

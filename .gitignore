@@ -12,4 +12,4 @@ wheels/
 # Project files
 data/
 logs/
-runs
+runs/
