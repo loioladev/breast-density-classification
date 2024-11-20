@@ -2,6 +2,7 @@ import logging
 import os
 import time
 
+import torch
 import yaml
 
 from src.datasets.dataloader import (
@@ -15,6 +16,7 @@ from src.models import ModelFactory
 from src.utils.config import ConfigManager, set_device, set_seed
 from src.utils.logging import CSVLogger, create_folder
 from src.utils.plotting import visualize_dataloader
+from src.helper import BinaryModelTester
 
 logger = logging.getLogger()
 
@@ -206,3 +208,31 @@ def main(args: dict) -> None:
             training.train(epochs, metrics, dataloaders)
         logger.info(f"Training of {target} model completed in {time.time() - since:.2f}s")
     logger.info(f"Binary training completed in {time.time() - since_binary:.2f}s")
+    # ----------------------------------------------------------------------- #
+
+    # ----------------------------------------------------------------------- #
+    #  BINARY MODEL TESTING
+    # ----------------------------------------------------------------------- #
+    values = []
+    targets = test_df['target'].unique()
+    for target in targets:
+        logger.info(f"Starting testing for target {target}")
+        
+        # -- create a binary dataframe for the target
+        binary_df = test_df.copy()
+        binary_df["target"] = binary_df["target"].apply(lambda x: 1 if x == target else 0)
+
+        # -- load dataloader
+        binary_class = ImageDataset(binary_df, transform=transformations["val"], target_transform=target_transformations["val"])
+        dataloader = get_dataloader(binary_class, batch_size, workers=workers)
+
+        # -- initialize tester instance
+        target_folder = os.path.join(log_folder, str(target))
+        binary_tester = BinaryModelTester(model, target_folder, dataloader, device)
+
+        # -- obtain predictions for the target
+        predictions = binary_tester.test()
+        threshold = binary_tester.find_optimal_threshold(predictions, metric='acc')
+
+        logger.info(f"Test in target {target} done. Threshold {threshold} obtained")
+        values.append((predictions, threshold))

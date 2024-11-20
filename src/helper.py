@@ -1,7 +1,10 @@
 import logging
 import time
 from pathlib import Path
+from abc import ABC, abstractmethod
+import os
 
+import numpy as np
 import pandas as pd
 import torch
 from torch import nn
@@ -9,6 +12,7 @@ from torch.utils.data import DataLoader
 from torchmetrics import MetricCollection
 from torchvision.transforms import v2
 from tqdm import tqdm
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 from src.utils.config import set_device
 from src.utils.logging import CSVLogger
@@ -209,3 +213,100 @@ class Training:
             logger.debug(f"{key}: {value}")
 
         return values
+    # TODO: print metrics over time
+
+
+class BaseModelTester(ABC):
+    """Base class for model testing implementations"""
+    def __init__(self, model: nn.Module, folder: str, dataloader: DataLoader, device: str) -> None:
+        """
+        Constructor for the BaseModelTester
+
+        :param model: Model instance
+        :param folder: The folder to save the results
+        :param dataloader: The dataloader object used for testing
+        :param device: The device to use for the testing
+        """
+        self.model = model
+        self.folder = Path(folder)
+        self.dataloader = dataloader
+        self.device = device
+
+    def evaluate(self, model: nn.Module) -> np.ndarray:
+        """
+        Evaluate a single model and return the probabilities
+
+        :param model: The model to evaluate
+        :param dataloader: The dataloader to evaluate
+        :return: The probabilities of the model for the test set
+        """
+        model.eval()
+        model.to(self.device)
+        all_probs = []
+        with torch.no_grad():
+            for inputs, _ in tqdm(self.dataloader, desc="Testing"):
+                inputs = inputs.to(self.device)
+                outputs = model(inputs)
+                probabilities = torch.sigmoid(outputs)
+                all_probs.extend(probabilities.cpu().numpy())
+        all_probs = np.array(all_probs)
+        return all_probs
+    
+    @abstractmethod
+    def test(self) -> list[float]:
+        """Test models and save the results"""
+        pass
+
+class BinaryModelTester(BaseModelTester):
+    def find_optimal_threshold(self, preds, metric: str = 'f1') -> float:
+        """
+        Find optimal classification threshold for the weights
+
+        :param preds: The sigmoid value of the prediction
+        :param labels: The ground-truth value of the target
+        :param metric: The metric used as reference
+        :return threshold: The optimal threshold for the predictions
+        """
+        # -- obtain labels of dataloader
+        all_labels = []
+        [all_labels.extend(labels) for _, labels in self.dataloader]
+
+        # -- obtain threshold values to iterate
+        thresholds = np.arange(0.1, 1.0, 0.01)
+
+        metric_functions = {
+            'acc': accuracy_score,
+            'f1': f1_score,
+            'pr': precision_score,
+            're': recall_score
+        }
+        if metric not in metric_functions:
+            raise ValueError("Value must be in 'acc', 'f1', 'pr' or 're'")
+        
+        # -- calculate the best score accodingly to the metric
+        scores = []
+        score_function = metric_functions[metric]
+        for threshold in thresholds:
+            y_pred = (preds >= threshold).astype(int)
+            score = score_function(all_labels, y_pred)
+            scores.append(score)
+        return thresholds[np.argmax(scores)]
+
+    def test(self) -> list:
+        """
+        Obtain model predictions for testing
+
+        :return: The probabilities for each label
+        """
+        # -- obtain logits from the models
+        probabilities = []
+        for fold in os.listdir(self.folder):
+            model_path = self.folder / Path(fold) / Path("best.pt")
+            model_info = torch.load(model_path, weights_only=True)
+            self.model.load_state_dict(model_info['model'])
+            probabilities.append(self.evaluate(self.model))
+        
+        # -- get mean of probabilities
+        probabilities = np.array(probabilities)
+        probabilities = np.mean(probabilities, axis=0)
+        return probabilities
