@@ -4,6 +4,7 @@ import time
 
 import torch
 import yaml
+import numpy as np
 
 from src.datasets.dataloader import (
     ImageDataset,
@@ -214,8 +215,7 @@ def main(args: dict) -> None:
     #  BINARY MODEL TESTING
     # ----------------------------------------------------------------------- #
     values = []
-    targets = test_df['target'].unique()
-    for target in targets:
+    for target in test_df['target'].unique():
         logger.info(f"Starting testing for target {target}")
         
         # -- create a binary dataframe for the target
@@ -232,7 +232,66 @@ def main(args: dict) -> None:
 
         # -- obtain predictions for the target
         predictions = binary_tester.test()
-        threshold = binary_tester.find_optimal_threshold(predictions, metric='acc')
+        threshold = binary_tester.find_optimal_threshold(predictions)
 
         logger.info(f"Test in target {target} done. Threshold {threshold} obtained")
         values.append((predictions, threshold))
+    print(test_df['target'].tolist())
+
+    # find best predictions for each item
+    best_predictions = []
+    for i in range(len(test_df)):
+        threshold_dist = []
+        max_index = -1
+
+        for j in range(len(values)):
+            prediction = values[j][0][i]
+            threshold = values[j][1]
+            if prediction >= threshold:
+                max_index = max(max_index, j)
+                threshold_dist.append(float('inf'))
+            else:
+                threshold_dist.append(threshold - prediction)
+
+        if max_index == -1:
+            best_predictions.append(np.argmin(threshold_dist))
+        else:
+            best_predictions.append(max_index)
+    
+    bp = []
+    for i in range(len(test_df)):
+        threshold_dist = []
+        for j in range(len(values)):
+            prediction = values[j][0][i]
+            threshold = values[j][1]
+            threshold_dist.append(prediction - threshold)
+        bp.append(np.argmax(threshold_dist))
+    
+    # -- calculate metrics
+    y_pred = bp
+    y_true = test_df["target"].tolist()
+
+    from sklearn.metrics import classification_report, confusion_matrix
+    target_names = ['A', 'B', 'C', 'D']
+    report = classification_report(
+        y_true, 
+        y_pred,
+        target_names=target_names,
+        digits=3,  # Number of decimal places
+        zero_division=0  # Handle zero division gracefully
+    )
+    print(report)
+
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    cm = confusion_matrix(y_true, y_pred)
+    
+    # Plot confusion matrix using seaborn
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                xticklabels=target_names if target_names else "auto",
+                yticklabels=target_names if target_names else "auto")
+    plt.title('Confusion Matrix')
+    plt.ylabel('True Label')
+    plt.xlabel('Predicted Label')
+    plt.savefig(os.path.join(log_folder, "confusion_matrix.png"))

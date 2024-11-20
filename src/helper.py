@@ -270,6 +270,7 @@ class BinaryModelTester(BaseModelTester):
         # -- obtain labels of dataloader
         all_labels = []
         [all_labels.extend(labels) for _, labels in self.dataloader]
+        print("labels:", [label.item() for label in all_labels])
 
         # -- obtain threshold values to iterate
         thresholds = np.arange(0.1, 1.0, 0.01)
