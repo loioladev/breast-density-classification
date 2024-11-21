@@ -1,10 +1,11 @@
 import logging
 import math
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from torch.utils.data import DataLoader
 import seaborn as sns
+from torch.utils.data import DataLoader
 
 logger = logging.getLogger()
 
@@ -77,23 +78,28 @@ def plot_confusion_matrix(cm, path: str) -> None:
     :param cm: The confusion matrix
     """
     plt.figure(figsize=(8, 6))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
-    plt.title('Confusion Matrix')
-    plt.ylabel('True Label')
-    plt.xlabel('Predicted Label')
-    plt.savefig(path, '/confusion_matrix.png')
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
+    plt.title("Confusion Matrix")
+    plt.ylabel("True Label")
+    plt.xlabel("Predicted Label")
+    plt.savefig(Path(path) / "confusion_matrix.png")
 
 
 def plot_roc_curve(roc_data, auroc):
     """Plot ROC curve"""
     plt.figure(figsize=(8, 6))
-    plt.plot(roc_data['fpr'], roc_data['tpr'], color='darkorange', lw=2, 
-             label=f'ROC curve (AUROC = {auroc:.3f})')
-    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    plt.plot(
+        roc_data["fpr"],
+        roc_data["tpr"],
+        color="darkorange",
+        lw=2,
+        label=f"ROC curve (AUROC = {auroc:.3f})",
+    )
+    plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('Receiver Operating Characteristic (ROC) Curve')
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title("Receiver Operating Characteristic (ROC) Curve")
     plt.legend(loc="lower right")
     plt.show()
