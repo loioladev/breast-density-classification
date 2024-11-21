@@ -1,77 +1,92 @@
 import logging
-import time
-from pathlib import Path
-from abc import ABC, abstractmethod
 import os
+import time
+from abc import ABC, abstractmethod
+from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import torch
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from torch import nn
 from torch.utils.data import DataLoader
 from torchmetrics import MetricCollection
-from torchvision.transforms import v2
 from tqdm import tqdm
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 from src.utils.config import set_device
-from src.utils.logging import CSVLogger
+from src.utils.logging import CSVLogger, convert_time
 
 logger = logging.getLogger()
 
 
-def get_transformations(res: tuple) -> dict[v2.Compose]:
-    """
-    Get transformations for the dataloader
-
-    :param res: The resolution of the images
-    :return: The transformations for the dataloader
-    """
-    # TODO: add new transformations
-    transforms = {
-        "train": v2.Compose(
-            [
-                v2.ToImage(),
-                v2.Resize(res),
-                v2.ToDtype(torch.float32, scale=True),
-            ],
-        ),
-        "val": v2.Compose(
-            [
-                v2.ToImage(),
-                v2.Resize(res),
-                v2.ToDtype(torch.float32, scale=True),
-            ],
-        ),
-    }
-    target_transforms = {
-        "train": lambda x: torch.tensor(x, dtype=torch.float32),
-        "val": lambda x: torch.tensor(x, dtype=torch.float32)
-    }
-    return transforms, target_transforms
-
-
-class Training:
-    """
-    Cl
-    """
+class BaseModelTrainer(ABC):
+    """Base class for model training implementations"""
 
     def __init__(
         self,
         model: nn.Module,
-        csv_logger: CSVLogger,
         criterion: nn.Module,
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler._LRScheduler,
-        log_path: Path,
+        csv_logger: CSVLogger,
+        save_path: str | Path,
     ) -> None:
-        device = set_device()
-        self.model = model.to(device)
-        self.criterion = criterion.to(device)
+        """
+        Constructor for the BaseModelTrainer
+
+        :param model: The model instance
+        :param csv_logger: The CSVLogger instance
+        :param criterion: The loss function
+        :param optimizer: The optimizer instance
+        :param scheduler: The scheduler instance
+        :param save_path: Folder path to storage training results
+        """
+        self.device = set_device()
+        self.model = model.to(self.device)
+        self.criterion = criterion.to(self.device)
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.csv_logger = csv_logger
-        self.log_path = Path(log_path)
+        self.log_path = Path(save_path)
+
+    def save_epoch(self, path: Path, is_best: bool, loss: float, epoch: int) -> None:
+        """
+        Save model, optimizer, scheduler and training states to the path
+
+        :param path: The path to save the model
+        :param is_best: If the model is the best found
+        :param loss: Loss obtained in the epoch
+        :param epoch: Epoch number
+        """
+        states = {
+            "loss": loss,
+            "epoch": epoch,
+            "model": self.model.state_dict(),
+            "optimizer": self.optimizer.state_dict(),
+            "scheduler": self.scheduler.state_dict(),
+        }
+        save_type = "best" if is_best else "last"
+        save_path = path / f"{save_type}.pt"
+        torch.save(states, save_path)
+        logger.debug(f"Model '{save_type}' saved to {save_path}")
+
+    def process_metrics(self, metrics: dict) -> list[str | float]:
+        """
+        Convert metrics from a MetricCollection to a list of values
+
+        :param metrics: The metrics dictionary
+        :return values: The list of values obtained for each metric
+        """
+        values = []
+        for key, value in metrics.items():
+            if key.endswith("confusion"):
+                values.append((key, str(value.cpu().tolist()).replace("\n", " ")))
+                continue
+            values.append((key, value.item()))
+
+        # -- log metrics for the user and return
+        for key, value in values:
+            logger.debug(f"{key}: {value}")
+        return values
 
     def train(
         self, epochs: int, metrics: MetricCollection, dataloaders: dict[DataLoader]
@@ -81,144 +96,153 @@ class Training:
 
         :param epochs: The number of epochs to train
         :param metrics: The metrics to use for the training
+        :param dataloaders: The dataloaders for the training, inside a dictionary
+        with keys 'train' and 'val'
         """
         # -- initialize variables
+        since = time.time()
         best_epoch = 0
         best_loss = float("inf")
-        device = set_device()
-        since = time.time()
 
         # -- initialize metrics
-        train_metrics = metrics.clone(prefix="train_").to(device)
-        val_metrics = metrics.clone(prefix="val_").to(device)
+        train_metrics = metrics.clone(prefix="train_").to(self.device)
+        val_metrics = metrics.clone(prefix="val_").to(self.device)
 
         # -- iterate over the epochs
         for epoch in range(epochs):
-            since_epoch = time.time()
-            logger.info(f"Epoch {epoch}/{epochs}")
+            since_epoch_train = time.time()
+            logger.info(f"Epoch {epoch + 1}/{epochs}")
 
-            train_loss_res, train_metrics_res = self.run_epoch(
+            # -- run the training epoch
+            train_loss_res, train_metrics_res = self.epoch(
                 "train", dataloaders["train"], train_metrics
             )
-            logger.info(f"Training completed in {time.time() - since_epoch:.2f}s")
+            logger.info(
+                f"Training completed in {convert_time(time.time() - since_epoch_train)}"
+            )
+            train_metrics_val = self.process_metrics(train_metrics_res)
 
+            # -- run the validation epoch
+            since_epoch_val = time.time()
             with torch.no_grad():
-                val_loss, val_metrics_res = self.run_epoch(
+                val_loss_res, val_metrics_res = self.epoch(
                     "val", dataloaders["val"], val_metrics
                 )
-            logger.info(f"Validation completed in {time.time() - since_epoch:.2f}s")
+                val_metrics_val = self.process_metrics(val_metrics_res)
+            logger.info(
+                f"Validation completed in {convert_time(time.time() - since_epoch_val)}"
+            )
 
             if self.scheduler:
-                self.scheduler.step(val_loss)
+                self.scheduler.step(val_loss_res)
 
-            if val_loss < best_loss:
-                best_loss = val_loss
+            # -- save the epoch state
+            if val_loss_res < best_loss:
+                best_loss = val_loss_res
                 best_epoch = epoch
-                self.save_epoch(self.log_path, True, val_loss, epoch)
-                logger.info(f"Model improved with loss {val_loss:.4f}")
-            self.save_epoch(self.log_path, False, val_loss, epoch)
+                self.save_epoch(self.log_path, True, val_loss_res, epoch)
+                logger.info(f"Model improved with loss {val_loss_res:.4f}")
+            self.save_epoch(self.log_path, False, val_loss_res, epoch)
 
             # -- log the results
-            time_elapsed = time.time() - since_epoch
-            logger.info(f"Epoch complete in {time_elapsed // 60}m {time_elapsed % 60}s")
-
-            logger.info(f"Training loss: {train_loss_res:.5f}")
-            logger.info(f"Validation loss: {val_loss:.5f}")
-            train_metrics_val = self.process_metrics(train_metrics_res)
-            val_metrics_val = self.process_metrics(val_metrics_res)
-
-            self.csv_logger.log(
-                "train", *[epoch, val_loss, time_elapsed, *[value for _, value in train_metrics_val]]
+            logger.info(
+                f"Epoch {epoch + 1} completed in {convert_time(time.time() - since_epoch_train)}"
             )
-            self.csv_logger.log("val", *[epoch, val_loss, time_elapsed, *[value for _, value in val_metrics_val]])
-
+            logger.info(f"Training loss: {train_loss_res:.4f}")
+            logger.info(f"Validation loss: {val_loss_res:.4f}")
+            for phase, elapsed_time, metrics in [
+                ("train", since_epoch_train, train_metrics_val),
+                ("val", since_epoch_val, val_metrics_val),
+            ]:
+                self.csv_logger.log(
+                    phase,
+                    *[
+                        epoch,
+                        val_loss_res,
+                        elapsed_time,
+                        *[value for _, value in metrics],
+                    ],
+                )
             train_metrics.reset()
             val_metrics.reset()
 
-        time_elapsed = time.time() - since
-        logger.info(f"Training complete in {time_elapsed // 60}m {time_elapsed % 60}s")
-        logger.info(f"Best loss: {best_loss:.4f} at epoch {best_epoch}")
-        return self.model
+        logger.info(f"Training completed in {convert_time(time.time() - since)}")
+        logger.info(f"Best loss {best_loss:.4f} at epoch {best_epoch}")
 
-    def run_epoch(
+    def epoch(
         self, phase: str, dataloader: dict[DataLoader], metrics: MetricCollection
     ) -> tuple[float, MetricCollection]:
         """
-        Run the epoch for the model
+        Run a single epoch for the model, with possibility of training or validation
 
-        :param phase: The phase of the epoch, train or val
+        :param phase: The phase of the epoch, 'train' or 'val'
         :param dataloader: The dataloader for the phase
-        :param metrics: The metrics for the phase
-        :return: The loss and metrics for the phase
+        :param metrics: The metrics to use for the phase
+        :return tuple: The loss and metrics for the phase
         """
-        # -- initialize variables
         running_loss = 0.0
-        device = set_device()
         self.model.train() if phase == "train" else self.model.eval()
         metrics.train() if phase == "train" else metrics.eval()
 
         # -- iterate over the dataloader
         for inputs, labels in tqdm(dataloader, desc=f"{phase}"):
-            inputs = inputs.to(device)
-            labels = labels.to(device)
+            inputs = inputs.to(self.device)
+            labels = labels.to(self.device)
 
             # -- forward operation
             with torch.set_grad_enabled(phase == "train"):
-                # TODO: this is only for binary classification, squeeze is not general
-                outputs = self.model(inputs).squeeze()
-                loss = self.criterion(outputs, labels) 
+                outputs, loss = self.epoch_iteration(inputs, labels)
                 if phase == "train":
                     loss.backward()
                     self.optimizer.step()
 
+            # -- update the metrics
             self.optimizer.zero_grad()
             running_loss += loss.item()
             metrics.update(outputs, labels)
 
+        # -- calculate the loss and metrics
         epoch_loss = running_loss / len(dataloader.dataset)
         return epoch_loss, metrics.compute()
 
-    def save_epoch(self, path: Path, is_best: bool, loss: float, epoch: int) -> None:
+    @abstractmethod
+    def epoch_iteration(
+        self, inputs: list[torch.Tensor], labels: list[torch.Tensor]
+    ) -> tuple[list, torch.Tensor]:
         """
-        Save the model to the path
+        Obtain the loss and update the model parameters
+
+        :param inputs: The input data
+        :param labels: The target labels
+        :return results: The outputs and loss obtained in the iteration
         """
-        training_results = {
-            "loss": loss,
-            "epoch": epoch,
-            "model": self.model.state_dict(),
-            "optimizer": self.optimizer.state_dict(),
-            "scheduler": self.scheduler.state_dict(),
-        }
-        type_save = "best" if is_best else "last"
-        path_save = path / f"{type_save}.pt"
-        torch.save(training_results, path_save)
-        logger.debug(f"Model {type_save} saved to {path_save}")
+        pass
 
-    def process_metrics(self, metrics: dict) -> list:
+
+class BinaryModelTrainer(BaseModelTrainer):
+    """Model Trainer for binary classification problems"""
+
+    def epoch_iteration(
+        self, inputs: list[torch.Tensor], labels: list[torch.Tensor]
+    ) -> tuple[list, torch.Tensor]:
         """
-        Convert metrics to a list of values
+        Obtain the loss and update the model parameters
 
-        :param metrics: The metrics dictionary
-        :return: The list of values
+        :param inputs: The input data
+        :param labels: The target labels
+        :return results: The outputs and loss obtained in the iteration
         """
-        values = []
-        for key, value in metrics.items():
-            if not key.endswith("confusion"):
-                values.append((key, value.item()))
-            else:
-                values.append((key, str(value.cpu().tolist()).replace('\n', ' ')))
-
-        # -- log the metrics
-        for key, value in values:
-            logger.debug(f"{key}: {value}")
-
-        return values
-    # TODO: print metrics over time
+        outputs = self.model(inputs).squeeze()
+        loss = self.criterion(outputs, labels)
+        return outputs, loss
 
 
 class BaseModelTester(ABC):
     """Base class for model testing implementations"""
-    def __init__(self, model: nn.Module, folder: str, dataloader: DataLoader, device: str) -> None:
+
+    def __init__(
+        self, model: nn.Module, folder: str, dataloader: DataLoader, device: str
+    ) -> None:
         """
         Constructor for the BaseModelTester
 
@@ -251,14 +275,17 @@ class BaseModelTester(ABC):
                 all_probs.extend(probabilities.cpu().numpy())
         all_probs = np.array(all_probs)
         return all_probs
-    
+
     @abstractmethod
     def test(self) -> list[float]:
         """Test models and save the results"""
         pass
 
+
 class BinaryModelTester(BaseModelTester):
-    def find_optimal_threshold(self, preds, metric: str = 'f1') -> float:
+    """Binary class to test the model in a binary classification problem"""
+
+    def find_optimal_threshold(self, preds, metric: str = "f1") -> float:
         """
         Find optimal classification threshold for the weights
 
@@ -270,20 +297,19 @@ class BinaryModelTester(BaseModelTester):
         # -- obtain labels of dataloader
         all_labels = []
         [all_labels.extend(labels) for _, labels in self.dataloader]
-        print("labels:", [label.item() for label in all_labels])
 
         # -- obtain threshold values to iterate
         thresholds = np.arange(0.1, 1.0, 0.01)
 
         metric_functions = {
-            'acc': accuracy_score,
-            'f1': f1_score,
-            'pr': precision_score,
-            're': recall_score
+            "acc": accuracy_score,
+            "f1": f1_score,
+            "pr": precision_score,
+            "re": recall_score,
         }
         if metric not in metric_functions:
             raise ValueError("Value must be in 'acc', 'f1', 'pr' or 're'")
-        
+
         # -- calculate the best score accodingly to the metric
         scores = []
         score_function = metric_functions[metric]
@@ -304,9 +330,9 @@ class BinaryModelTester(BaseModelTester):
         for fold in os.listdir(self.folder):
             model_path = self.folder / Path(fold) / Path("best.pt")
             model_info = torch.load(model_path, weights_only=True)
-            self.model.load_state_dict(model_info['model'])
+            self.model.load_state_dict(model_info["model"])
             probabilities.append(self.evaluate(self.model))
-        
+
         # -- get mean of probabilities
         probabilities = np.array(probabilities)
         probabilities = np.mean(probabilities, axis=0)

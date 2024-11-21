@@ -70,7 +70,7 @@ def visualize_dataloader(dataloader: DataLoader, id_to_label: dict, path: str) -
     logger.info(f"Batch visualization saved at {path}")
 
 
-def plot_confusion_matrix(cm) -> None:
+def plot_confusion_matrix(cm, path: str) -> None:
     """
     Plot the confusion matrix
 
@@ -81,7 +81,7 @@ def plot_confusion_matrix(cm) -> None:
     plt.title('Confusion Matrix')
     plt.ylabel('True Label')
     plt.xlabel('Predicted Label')
-    plt.show()
+    plt.savefig(path, '/confusion_matrix.png')
 
 
 def plot_roc_curve(roc_data, auroc):

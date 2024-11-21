@@ -1,10 +1,12 @@
 import logging
 import os
 import time
+from pathlib import Path
 
-import torch
-import yaml
 import numpy as np
+import pandas as pd
+import yaml
+from sklearn.metrics import classification_report, confusion_matrix
 
 from src.datasets.dataloader import (
     ImageDataset,
@@ -12,12 +14,12 @@ from src.datasets.dataloader import (
     get_dataframe,
     get_dataloader,
 )
-from src.helper import get_transformations, Training
+from src.helper import BinaryModelTester, BinaryModelTrainer
 from src.models import ModelFactory
+from src.transforms import get_transformations
 from src.utils.config import ConfigManager, set_device, set_seed
-from src.utils.logging import CSVLogger, create_folder
-from src.utils.plotting import visualize_dataloader
-from src.helper import BinaryModelTester
+from src.utils.logging import CSVLogger, convert_time, create_folder
+from src.utils.plotting import plot_confusion_matrix, visualize_dataloader
 
 logger = logging.getLogger()
 
@@ -134,164 +136,256 @@ def main(args: dict) -> None:
         metric_args["average"] = metric_reduction
     metrics = ConfigManager.get_metrics(metric_types, metric_args)
 
-    # ----------------------------------------------------------------------- #
-    #  BINARY MODEL TRAINING
-    # ----------------------------------------------------------------------- #
-    since_binary = time.time()
-    targets = train_df["target"].unique().tolist()
-    targets = sorted(targets)
-    for target in targets:
-        logger.info(f"Starting training for target {target}")
-
-        # -- create a binary dataframe for the target
-        binary_df = train_df.copy()
-        binary_df["target"] = binary_df["target"].apply(lambda x: 1 if x == target else 0)
-
-        # -- initialize folder
-        binary_folder = os.path.join(log_folder, f"{target}")
-        os.makedirs(binary_folder, exist_ok=True)
-        logger.debug(f"Binary folder created at {binary_folder}")
-
-        # -- initialize variables
-        since = time.time()
-        model_start = model.state_dict()
-        optimizer_start = optimizer.state_dict()
-        scheduler_start = scheduler.state_dict() if scheduler else None
-
-        for fold in range(kfolds):
-            logger.info(f"Training of fold {fold+1}/{kfolds}")
-
-            # -- reset objects
-            model.load_state_dict(model_start)
-            optimizer.load_state_dict(optimizer_start)
-            if scheduler:
-                scheduler.load_state_dict(scheduler_start)
-
-            # -- create dataloaders
-            fold_train_df = binary_df[binary_df["fold"] != fold]
-            fold_val_df = binary_df[binary_df["fold"] == fold]
-            train_class = ImageDataset(fold_train_df, transformations["train"], target_transformations["train"])
-            val_class = ImageDataset(fold_val_df, transformations["val"], target_transformations["val"])
-            train_loader = get_dataloader(train_class, batch_size, sampler, workers=workers)
-            val_loader = get_dataloader(val_class, batch_size, workers=workers)
-            dataloaders = {"train": train_loader, "val": val_loader}
-            logger.debug("Dataloaders created with sizes")
-            for key, value in dataloaders.items():
-                logger.debug(f"{key}: {len(value.dataset)}")
-
-            folder_path = os.path.join(binary_folder, f"fold_{fold}")
-            os.makedirs(folder_path, exist_ok=True)
-
-            # -- make csv logger
-            logger_metrics = []
-            for metric_type in metrics:
-                if metric_type in ['confusion']:
-                    logger_metrics.append(("%s", metric_type))
-                    continue
-                logger_metrics.append(("%.5f", metric_type))
-            csv_logger = CSVLogger(
-                folder_path,
-                ("%d", "epoch"),
-                ("%.5f", "loss"),
-                ("%d", "time"),
-                *logger_metrics
-            )
-
-            # -- run training
-            training = Training(
-                model,
-                csv_logger,
-                loss,
-                optimizer,
-                scheduler,
-                folder_path,
-            )
-            training.train(epochs, metrics, dataloaders)
-        logger.info(f"Training of {target} model completed in {time.time() - since:.2f}s")
-    logger.info(f"Binary training completed in {time.time() - since_binary:.2f}s")
-    # ----------------------------------------------------------------------- #
-
-    # ----------------------------------------------------------------------- #
-    #  BINARY MODEL TESTING
-    # ----------------------------------------------------------------------- #
-    values = []
-    for target in test_df['target'].unique():
-        logger.info(f"Starting testing for target {target}")
-        
-        # -- create a binary dataframe for the target
-        binary_df = test_df.copy()
-        binary_df["target"] = binary_df["target"].apply(lambda x: 1 if x == target else 0)
-
-        # -- load dataloader
-        binary_class = ImageDataset(binary_df, transform=transformations["val"], target_transform=target_transformations["val"])
-        dataloader = get_dataloader(binary_class, batch_size, workers=workers)
-
-        # -- initialize tester instance
-        target_folder = os.path.join(log_folder, str(target))
-        binary_tester = BinaryModelTester(model, target_folder, dataloader, device)
-
-        # -- obtain predictions for the target
-        predictions = binary_tester.test()
-        threshold = binary_tester.find_optimal_threshold(predictions)
-
-        logger.info(f"Test in target {target} done. Threshold {threshold} obtained")
-        values.append((predictions, threshold))
-    print(test_df['target'].tolist())
-
-    # find best predictions for each item
-    best_predictions = []
-    for i in range(len(test_df)):
-        threshold_dist = []
-        max_index = -1
-
-        for j in range(len(values)):
-            prediction = values[j][0][i]
-            threshold = values[j][1]
-            if prediction >= threshold:
-                max_index = max(max_index, j)
-                threshold_dist.append(float('inf'))
-            else:
-                threshold_dist.append(threshold - prediction)
-
-        if max_index == -1:
-            best_predictions.append(np.argmin(threshold_dist))
-        else:
-            best_predictions.append(max_index)
-    
-    bp = []
-    for i in range(len(test_df)):
-        threshold_dist = []
-        for j in range(len(values)):
-            prediction = values[j][0][i]
-            threshold = values[j][1]
-            threshold_dist.append(prediction - threshold)
-        bp.append(np.argmax(threshold_dist))
-    
-    # -- calculate metrics
-    y_pred = bp
-    y_true = test_df["target"].tolist()
-
-    from sklearn.metrics import classification_report, confusion_matrix
-    target_names = ['A', 'B', 'C', 'D']
-    report = classification_report(
-        y_true, 
-        y_pred,
-        target_names=target_names,
-        digits=3,  # Number of decimal places
-        zero_division=0  # Handle zero division gracefully
+    # -- initialize binary classification
+    binary_classification = BinaryClassification(
+        log_folder,
+        model,
+        loss,
+        optimizer,
+        scheduler,
+        transformations,
+        target_transformations,
+        batch_size,
+        workers,
+        sampler,
     )
-    print(report)
 
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-    cm = confusion_matrix(y_true, y_pred)
-    
-    # Plot confusion matrix using seaborn
-    plt.figure(figsize=(8, 6))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-                xticklabels=target_names if target_names else "auto",
-                yticklabels=target_names if target_names else "auto")
-    plt.title('Confusion Matrix')
-    plt.ylabel('True Label')
-    plt.xlabel('Predicted Label')
-    plt.savefig(os.path.join(log_folder, "confusion_matrix.png"))
+    # -- train models
+    binary_classification.train_models(train_df, kfolds, epochs, metrics)
+
+    # -- test models
+    binary_classification.test_models(test_df)
+
+
+class BinaryClassification:
+    def __init__(
+        self,
+        folder: str,
+        model,
+        criterion,
+        optimizer,
+        scheduler,
+        transforms,
+        target_transforms,
+        batch_size,
+        workers,
+        sampler,
+    ) -> None:  # TODO: ABC
+        self.run_folder = Path(folder)
+        self.model = model
+        self.criterion = criterion
+        self.optimizer = optimizer
+        self.scheduler = scheduler
+        self.transforms = transforms
+        self.target_transforms = target_transforms
+        self.batch_size = batch_size
+        self.workers = workers
+        self.sampler = sampler
+        self.device = set_device()
+
+    def load_data(self, dataframe: pd.DataFrame, fold: int) -> dict:  # TODO: ABC
+        """
+        Load dataloaders for training and validation, according to folds for
+        cross validation.
+
+        :param dataframe: The dataframe to split
+        :param fold: The fold to use for validation
+        :return dataloaders: The dataloaders for training and validation
+        """
+        fold_train_df = dataframe[dataframe["fold"] != fold]
+        fold_val_df = dataframe[dataframe["fold"] == fold]
+
+        # TODO: log fold distribution
+
+        train_class = ImageDataset(
+            fold_train_df, self.transforms["train"], self.target_transforms["train"]
+        )
+        val_class = ImageDataset(
+            fold_val_df, self.transforms["val"], self.target_transforms["val"]
+        )
+
+        train_loader = get_dataloader(
+            train_class, self.batch_size, self.sampler, workers=self.workers
+        )
+        val_loader = get_dataloader(val_class, self.batch_size, workers=self.workers)
+
+        dataloaders = {"train": train_loader, "val": val_loader}
+        return dataloaders
+
+    def create_logger(self, folder_path: str, metrics: dict) -> CSVLogger:  # TODO: abc
+        """
+        Create an instance of the CSV logger to store the metrics
+
+        :param folder_path: The path to the folder to store the metrics
+        :param metrics: The metrics to store
+        :return: The instance of the CSV logger
+        """
+        logger_metrics = []
+        for metric_type in metrics:
+            if metric_type in ["confusion"]:
+                logger_metrics.append(("%s", metric_type))
+                continue
+            logger_metrics.append(("%.5f", metric_type))
+
+        csv_logger = CSVLogger(
+            folder_path,
+            ("%d", "epoch"),
+            ("%.5f", "loss"),
+            ("%d", "time"),
+            *logger_metrics,
+        )
+        return csv_logger
+
+    def train_models(
+        self, dataframe: pd.DataFrame, kfolds: int, epochs: int, metrics: list
+    ) -> None:
+        """
+        Initialize training of the binary classification models
+
+        :param dataframe: The dataframe to use for training
+        :param kfolds: The number of folds to use for cross validation
+        :param epochs: The number of epochs to train the models
+        :param metrics: The MetricCollection to use for evaluation
+        """
+        since_binary = time.time()
+
+        # -- obtain targets in **ascending order**
+        targets = dataframe["target"].unique().tolist()
+        targets = sorted(targets)
+        for target in targets:
+            since_target = time.time()
+            logger.info(f"Starting training for target {target}")
+
+            # -- initialize target folder
+            binary_folder = Path(self.run_folder) / str(target)
+            os.makedirs(binary_folder, exist_ok=True)
+
+            # -- create a binary dataframe for the target
+            binary_df = dataframe.copy()
+            binary_df["target"] = binary_df["target"].apply(
+                lambda x: 1 if x == target else 0
+            )
+            # TODO: log distribution of target
+
+            # -- store pretrained states
+            model_start = self.model.state_dict()
+            optimizer_start = self.optimizer.state_dict()
+            scheduler_start = self.scheduler.state_dict() if self.scheduler else None
+
+            for fold in range(kfolds):
+                logger.info(f"Starting training on fold {fold+1}/{kfolds}")
+
+                # -- create storage of fold
+                folder_path = os.path.join(binary_folder, f"fold_{fold}")
+                os.makedirs(folder_path, exist_ok=True)
+
+                # -- create dataloaders and logger
+                dataloaders = self.load_data(binary_df, fold)
+                csv_logger = self.create_logger(folder_path, metrics)
+
+                # -- start fold training
+                trainer = BinaryModelTrainer(
+                    self.model,
+                    self.criterion,
+                    self.optimizer,
+                    self.scheduler,
+                    csv_logger,
+                    folder_path,
+                )
+                trainer.train(epochs, metrics, dataloaders)
+
+                # -- reset models to pretrained version
+                self.model.load_state_dict(model_start)
+                self.optimizer.load_state_dict(optimizer_start)
+                if self.scheduler:
+                    self.scheduler.load_state_dict(scheduler_start)
+
+            logger.info(
+                f"Models of target {target} trained in {convert_time(time.time() - since_target)}"
+            )
+        logger.info(
+            f"Binary models classification training completed in {convert_time(time.time() - since_binary)}"
+        )
+
+    def test_models(self, dataframe: pd.DataFrame):
+        """"""
+        logger.info("Start testing binary models")
+        results = []
+        for target in dataframe["target"].unique():
+            logger.info(f"Starting testing for target {target}")
+
+            # -- create a binary dataframe for the target
+            binary_df = dataframe.copy()
+            binary_df["target"] = binary_df["target"].apply(
+                lambda x: 1 if x == target else 0
+            )
+
+            # -- load dataloader
+            binary_class = ImageDataset(
+                binary_df, self.transforms["val"], self.target_transforms["val"]
+            )
+            dataloader = get_dataloader(
+                binary_class, self.batch_size, workers=self.workers
+            )
+
+            # -- initialize tester instance
+            target_folder = self.run_folder / str(target)
+            binary_tester = BinaryModelTester(
+                self.model, target_folder, dataloader, self.device
+            )
+
+            # -- obtain predictions for the target
+            target_predictions = binary_tester.test()
+            threshold = binary_tester.find_optimal_threshold(target_predictions)
+            results.append((target_predictions, threshold))
+            logger.info(
+                f"Test in target {target} done. Threshold {threshold:.2f} obtained"
+            )
+        logger.info("Binary models testing completed")
+
+        # -- calculate the metrics
+        best_predictions = self.select_best_predictions(dataframe, results)
+        ground_truth = dataframe["target"].tolist()
+        report = classification_report(
+            ground_truth,
+            best_predictions,
+            target_names=["A", "B", "C", "D"],
+            digits=3,
+            zero_division=0,
+        )
+        logger.info(report)
+
+        # -- calculate confusion matrix
+        cm = confusion_matrix(ground_truth, best_predictions)
+        plot_confusion_matrix(cm, self.run_folder)
+
+    def select_best_predictions(
+        self, dataframe: pd.DataFrame, values: list[float]
+    ) -> list[int]:
+        """
+        Select best predictions based on the threshold values
+
+        :param values: The list of predictions and thresholds
+        """
+        # -- initialize variable
+        n_samples = len(dataframe)
+        n_classes = len(values)
+        best_predictions = np.full(n_samples, -1, dtype=int)
+
+        for i in range(n_samples):
+            # -- extract predictions and thresholds for this sample
+            sample_predictions = np.array([values[j][0][i] for j in range(n_classes)])
+            sample_thresholds = np.array([values[j][1] for j in range(n_classes)])
+
+            # -- find indices where prediction meets or exceeds threshold
+            valid_indices = np.where(sample_predictions >= sample_thresholds)[0]
+
+            if len(valid_indices) > 0:
+                # -- if any predictions meet threshold, take the last (highest index)
+                best_predictions[i] = valid_indices[-1]
+            else:
+                # -- if no predictions meet threshold, find the closest to threshold
+                threshold_distances = sample_thresholds - sample_predictions
+                best_predictions[i] = np.argmin(threshold_distances)
+
+        return best_predictions

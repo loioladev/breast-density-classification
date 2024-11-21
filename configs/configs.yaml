@@ -10,11 +10,11 @@ meta:
     reduction: 'weighted'
 
 data:
-  datasets_path: '/home/matheus/Documents/git/breast-density-classification/data'       
+  datasets_path: '/home/loioladev/git/breast-density-classification/data'       
   datasets: ['inbreast']
   sampler: 'weightened'
-  batch_size: 8
-  workers: 4
+  batch_size: 12
+  workers: 8
   
 model:
   name: 'resnet'
@@ -23,7 +23,7 @@ model:
 
 training:
   lr: 0.001
-  epochs: 2
+  epochs: 1
   loss: 'bce'
   scheduler: 'plateau'
   optimizer: 'adamw'

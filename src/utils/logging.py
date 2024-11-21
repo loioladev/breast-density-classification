@@ -61,3 +61,15 @@ def create_folder(folder: str, experiment_name: str = "training") -> str:
     log_folder = os.path.join(folder, f"{experiment_name}_{str(experiment_len + 1)}")
     os.makedirs(log_folder, exist_ok=True)
     return log_folder
+
+
+def convert_time(seconds: int) -> str:
+    """
+    Convert seconds to a string with the time
+
+    :param seconds: The seconds to convert
+    :return: The time in the format HH:MM:SS
+    """
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+    return f"{int(h):02d}:{int(m):02d}:{int(s):02d}"
