@@ -47,7 +47,7 @@ def process_inbreast_image(dicom_path: str, output: str, dicom_ids: set[str]) ->
     # -- recort black space
     image, _ = recort_breast_morp(image)
 
-    # -- apply CLAHE
+    # -- apply CLAHE contrast enhancement (https://www.sciencedirect.com/science/article/pii/S2352340920308222)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     image = clahe.apply(image)
 
