@@ -7,7 +7,9 @@ processed in DICOM format, so the conversion to PNG will be straightforward. The
 file contains the metadata of the DICOM files, which will be used to create the training
 model format.
 
-The way to use this module is to call the inbreast function, passing the path to the
+The dataset is prepocessed with CLAHE, which is a contrast enhancement algorithm.
+
+The way to use this module is to call the `inbreast` function, passing the path to the
 extracted INbreast dataset folder.
 """
 
@@ -34,8 +36,7 @@ def process_inbreast_image(dicom_path: str, output: str, dicom_ids: set[str]) ->
     :param dicom_ids: Set of DICOM IDs to be processed
     """
     split_name = os.path.basename(dicom_path).split("_")
-    if split_name[0] not in dicom_ids:
-        return
+    if split_name[0] not in dicom_ids: return
 
     image = pydicom.pixel_array(dicom_path)
 
@@ -46,9 +47,12 @@ def process_inbreast_image(dicom_path: str, output: str, dicom_ids: set[str]) ->
     # -- recort black space
     image, _ = recort_breast_morp(image)
 
+    # -- apply CLAHE
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    image = clahe.apply(image)
+
     # -- save image in format filename_laterality_view.png
-    if split_name[4] == "ML":
-        split_name[4] = "MLO"
+    if split_name[4] == "ML": split_name[4] = "MLO"
     filename = f"{split_name[0]}_{split_name[3]}_{split_name[4]}.png"
     cv2.imwrite(os.path.join(output, filename), image)
 
