@@ -37,12 +37,28 @@ To download it, you need to create an account on Kaggle and download the [datase
 
 ### Preprocessing
 
-The dataset is in DICOM format, so it is necessary to convert it to PNG. The script `rsna.py` does this conversion. It converts the DICOM to PNG using the `pydicom` library, and a function to recort the breast from the image is applied. TODO: add preprocessing steps
-
 ## VinDr Mammo
 
 The [VinDr-Mammo](https://www.physionet.org/content/vindr-mammo/1.0.0/) dataset is a large-scale full-field digital mammography dataset, which can be used for the purpose of developing and evaluating algorithms for providing cancer assessment and breast density following the Breast Imaging Report and Data System (BI-RADS). The dataset is split into 1,000 test exams and 4,000 training exams, with the frequencies of each BI-RADS category, density level, and abnormality category being preserved by applying an iterative stratification algorithm.
 
 ### Download
 
-Access [Physionet website](https://www.physionet.org/content/vindr-mammo/1.0.0/) and create an account to download the dataset.
+Access [Physionet website](https://www.physionet.org/content/vindr-mammo/1.0.0/) and create an account to download the dataset. Use the `wget` command to download the dataset via terminal.
+
+## Preprocessing
+
+## Mini-DDSM
+
+### Download
+
+To download it, you need to create an account on Kaggle and download the [dataset](https://www.kaggle.com/datasets/cheddad/miniddsm2/data) via the website or API.
+
+### Preprocessing
+
+## BMCD
+
+### Download
+
+To download it, go to the [dataset website](https://zenodo.org/records/5036062) and download the `Dataset.zip` file.
+
+### Preprocessing
