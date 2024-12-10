@@ -60,7 +60,7 @@ def recort_breast_morp(
     Recort the breast from the image, excluding the excess empty space
     and the artifacts that may be present in the image. This function
     uses morphological operations to process the image, inspired by
-    the following work: DOI - 10.1109/ICBAPS.2015.7292214
+    the following work -> DOI - 10.1109/ICBAPS.2015.7292214
 
     :param image: Image to be processed
     :return image: Processed image and the bounding box of the breast

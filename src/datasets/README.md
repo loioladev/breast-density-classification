@@ -8,12 +8,11 @@ The datasets used in this project are:
 
 - [InBreast](#inbreast)
 - [RSNA](#rsna)
+- [VinDr Mammo](#vindr-mammo)
+- [Mini-DDSM](#mini-ddsm)
+- [BMCD](#bmcd)
 
-For all datasets, the metadata is stored in a CSV file with the following columns:
-- `filename`: the name of the image file, usually with patient ID and study date informations
-- `laterality`: the laterality of the breast, either `L` or `R`
-- `view`: the view of the breast, either `CC` or `MLO`
-- `density`: the breast density, either \[A-Z\], \[0-3\] or \[1-4\].
+For all datasets, the metadata is stored in a CSV file with name "metadata.csv". The images are flipped to the right orientation, and the breast is cropped from the image. The images are normalized to `uint8` in order to apply the operations from opencv.
 
 ## InBreast
 
@@ -57,8 +56,12 @@ To download it, you need to create an account on Kaggle and download the [datase
 
 ## BMCD
 
+This dataset consists of 100 pairs of mammograms, from two temporally sequential rounds. Specifically, this dataset includes the prior and recent mammograms of CC and MLO view of each patient. This is a complete dataset for the detection and BI-RADS classification of breast micro-calcifications, using digital mammograms. The dataset is available at the [Zenodo](https://zenodo.org/records/5036062) platform.
+
 ### Download
 
-To download it, go to the [dataset website](https://zenodo.org/records/5036062) and download the `Dataset.zip` file.
+To download it, go to the [dataset website](https://zenodo.org/records/5036062) and download the `Dataset.zip` and 'Description.xlsx' files. Change their names no `bmcd.zip` and `bmcd.xlsx` and put them in the same folder.
 
 ### Preprocessing
+
+The dataset is in DICOM format, so it is necessary to convert it to PNG. The script `bmcd.py` does this conversion. It converts the DICOM to PNG using the `pydicom` library, and a function to recort the breast from the image is applied. The data already has a good contrast, so no filter is applied.

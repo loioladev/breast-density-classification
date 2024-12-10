@@ -21,6 +21,7 @@ from torch.utils.data import (
 )
 
 from src.datasets.inbreast import get_inbreast
+from src.datasets.bmcd import get_bmcd
 
 logger = logging.getLogger()
 
@@ -120,7 +121,9 @@ def get_dataframe(
     :param split: Quantity to maintain in training dataframe
     :return dataframe: A DataFrame object containing the targets and paths.
     """
-    func = {"inbreast": get_inbreast}
+    func = {"inbreast": get_inbreast,
+            "bmcd": get_bmcd,
+            }
     total_df = pd.DataFrame(columns=["target", "path", "dataset"])
 
     # -- merge all datasets

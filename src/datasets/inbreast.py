@@ -1,5 +1,5 @@
 """
-Convert INbreast dataset to the training model format. The dataset was obtained from
+Convert InBreast dataset to the training model format. The dataset was obtained from
 Kaggle and is available in the following link: https://www.kaggle.com/datasets/martholi/inbreast
 
 The INbreast dataset contains DICOM files and a CSV file. The DICOM files are already
@@ -9,7 +9,7 @@ model format.
 
 The dataset is prepocessed with CLAHE, which is a contrast enhancement algorithm.
 
-The way to use this module is to call the `inbreast` function, passing the path to the
+The way to use this module is to call the `get_inbreast` function, passing the path to the
 extracted INbreast dataset folder.
 """
 
@@ -46,6 +46,10 @@ def process_inbreast_image(dicom_path: str, output: str, dicom_ids: set[str]) ->
 
     # -- recort black space
     image, _ = recort_breast_morp(image)
+
+    # -- flip image if it is right breast
+    if split_name[1] == "R":
+        image = cv2.flip(image, 1)
 
     # -- apply CLAHE contrast enhancement (https://www.sciencedirect.com/science/article/pii/S2352340920308222)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
@@ -143,12 +147,13 @@ def convert_inbreast(path: str, output: str, processes: int = 1) -> None:
     df = process_csv(csv_path, output)
     dicom_ids = set(df["filename"].astype(str))
     process_dicom(dicom_path, output, dicom_ids, processes)
-    logger.info("INbreast dataset processed")
+    logger.info("InBreast dataset processed")
 
 
 def get_inbreast(csv_path: str, image_path: str) -> pd.DataFrame:
     """
-    Get the INbreast dataset prepared for the training
+    Get the InBreast dataset for training, adding the columns 'path' and 'target'
+    to the DataFrame.
 
     :param csv_path: Path to the CSV file
     :param image_path: Path to the images directory

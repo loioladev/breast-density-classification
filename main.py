@@ -3,6 +3,7 @@ import logging
 
 import yaml
 
+from src.datasets.bmcd import convert_bmcd
 from src.datasets.inbreast import convert_inbreast
 from src.train import main as app_main
 
@@ -25,7 +26,7 @@ def create_parser() -> argparse.ArgumentParser:
     parser_convert.add_argument(
         "dataset",
         type=str,
-        choices=["inbreast"],
+        choices=["inbreast", "bmcd"],
         help="Dataset to convert",
     )
     parser_convert.add_argument(
@@ -80,6 +81,8 @@ def convert(dataset: str, path: str, output: str, processes: int) -> None:
     # -- start conversion
     if dataset == "inbreast":
         convert_inbreast(path, output, processes)
+    if dataset == "bmcd":
+        convert_bmcd(path, output, processes)
 
 
 def train(fname: str) -> None:
