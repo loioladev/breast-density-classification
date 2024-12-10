@@ -1,7 +1,7 @@
 meta:
   task_type: 'binary'
   training_folder: './runs'
-  experiment_name: 'binary_inbreast'
+  experiment_name: 'both_datasets'
   checkpoint_dir: ''
   seed: 42
   kfolds: 2
@@ -10,8 +10,8 @@ meta:
     reduction: 'weighted'
 
 data:
-  datasets_path: '/home/loioladev/git/breast-density-classification/data'       
-  datasets: ['inbreast']
+  datasets_path: '/home/loiola/breast-density-classification/data'       
+  datasets: ['inbreast', 'bmcd']
   sampler: 'weightened'
   batch_size: 12
   workers: 8
@@ -23,7 +23,7 @@ model:
 
 training:
   lr: 0.001
-  epochs: 1
+  epochs: 30
   loss: 'bce'
   scheduler: 'plateau'
   optimizer: 'adamw'

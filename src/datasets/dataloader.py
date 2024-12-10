@@ -143,7 +143,8 @@ def get_dataframe(
 
     total_df["target"] = total_df["target"].astype(int)
     total_df["path"] = total_df["path"].astype(str)
-    return split_dataset(total_df, split, seed)
+    train_df, test_df = split_dataset(total_df, split, seed)
+    return train_df, test_df
 
 
 def get_dataloader(
@@ -179,6 +180,7 @@ def get_dataloader(
         shuffle=shuffle,
         sampler=sampler,
         num_workers=workers,
+        drop_last=True, # -- drop last batch if it is not complete
     )
     return dataloader
 

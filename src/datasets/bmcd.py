@@ -105,12 +105,12 @@ def process_csv(xlsx_path: Path, dicom_dir: Path, output: Path) -> None:
         
         data.append(
             {
-                "case": file_class,
-                "number": file_idx,
-                "status": file_info,
-                "laterality": ds.ImageLaterality,
-                "view": view,
-                "density": density
+                "case": file_class.lower(),
+                "number": int(file_idx),
+                "status": file_info.lower(),
+                "laterality": ds.ImageLaterality.lower(),
+                "view": view.lower(),
+                "density": density.lower()
             }
         )
     dataframe = pd.DataFrame(data)
