@@ -3,7 +3,7 @@ import os
 
 import yaml
 
-from src.datasets.dataloader import (
+from datasets.dataloader import (
     ImageDataset,
     cross_validation,
     get_dataframe,

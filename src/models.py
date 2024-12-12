@@ -108,8 +108,4 @@ class ModelFactory:
             pretrained=pretrained,
         )
 
-        # -- add sigmoid for binary classification
-        if task_type == "binary":
-            model = nn.Sequential(model, nn.Sigmoid())
-
         return model

@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader
 from torchmetrics import MetricCollection
 from tqdm import tqdm
 
-from src.datasets.dataloader import (
+from datasets.dataloader import (
     ImageDataset,
     get_dataloader,
 )
@@ -210,9 +210,9 @@ class BaseModelTrainer(ABC):
                     self.optimizer.step()
 
             # -- update the metrics
-            self.optimizer.zero_grad()
             running_loss += loss.item()
             metrics.update(outputs, labels)
+            self.optimizer.zero_grad()
 
         # -- calculate the loss and metrics
         epoch_loss = running_loss / len(dataloader.dataset)
@@ -246,6 +246,24 @@ class BinaryModelTrainer(BaseModelTrainer):
         :return results: The outputs and loss obtained in the iteration
         """
         outputs = self.model(inputs).squeeze()
+        loss = self.criterion(outputs, labels)
+        return outputs, loss
+    
+
+class MulticlassModelTrainer(BaseModelTrainer):
+    """Model Trainer for multi-class classification problems"""
+
+    def epoch_iteration(
+        self, inputs: list[torch.Tensor], labels: list[torch.Tensor]
+    ) -> tuple[list, torch.Tensor]:
+        """
+        Obtain the loss and update the model parameters
+
+        :param inputs: The input data
+        :param labels: The target labels
+        :return results: The outputs and loss obtained in the iteration
+        """
+        outputs = self.model(inputs)
         loss = self.criterion(outputs, labels)
         return outputs, loss
 
@@ -284,7 +302,7 @@ class BaseModelTester(ABC):
             for inputs, _ in tqdm(self.dataloader, desc="Testing"):
                 inputs = inputs.to(self.device)
                 outputs = model(inputs)
-                probabilities = torch.sigmoid(outputs)
+                probabilities = torch.sigmoid(outputs) # Review this for multiclass
                 all_probs.extend(probabilities.cpu().numpy())
         all_probs = np.array(all_probs)
         return all_probs
@@ -606,3 +624,7 @@ class BinaryClassification(BaseClassification):
                 best_predictions[i] = np.argmin(threshold_distances)
 
         return best_predictions
+
+
+class MulticlassClassification(BaseClassification):
+    pass
