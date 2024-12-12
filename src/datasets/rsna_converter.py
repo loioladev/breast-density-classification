@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import pydicom
 
-from datasets.base import BaseConverter
+from datasets.base_converter import BaseConverter
 from src.utils.processing import apply_windowing, left_side_breast, recort_breast_morp
 
 logger = logging.getLogger()

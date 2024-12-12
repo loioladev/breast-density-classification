@@ -7,95 +7,38 @@ import logging
 import sys
 from pathlib import Path
 
-import cv2
 import numpy as np
 import pandas as pd
-from pydicom.pixels import pixel_array
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import (
     DataLoader,
-    Dataset,
     RandomSampler,
     SequentialSampler,
     WeightedRandomSampler,
 )
 
-from src.datasets.bmcd import BMCDConverter
-from src.datasets.inbreast import InBreastConverter
-from src.datasets.rsna import RSNAConverter
+from datasets.bmcd_converter import BMCDConverter
+from datasets.inbreast_converter import InBreastConverter
+from datasets.oneview_dataset import OneViewDataset
+from datasets.rsna_converter import RSNAConverter
 
 logger = logging.getLogger()
-
-
-class ImageDataset(Dataset):
-    def __init__(
-        self, csv: pd.DataFrame, transform=None, target_transform=None
-    ) -> None:
-        """
-        Constructor of the class
-
-        :param csv: The dataframe to store in the class
-        :param transform: The image transformations before returning it
-        :param target_transform: The taregt transformations before returning it
-        """
-        self.csv = csv
-        self.transform = transform
-        self.target_transform = target_transform
-
-    def __len__(self) -> int:
-        """Return size of dataset"""
-        return len(self.csv)
-
-    def __getitem__(self, idx: int) -> tuple[np.ndarray, int]:
-        """
-        Get item from index
-
-        :param idx: Index of item to be returned
-        :return values: The image and label of the index
-        """
-        row = self.csv.iloc[idx]
-
-        # -- get image
-        image_path = row["path"]
-        if image_path.endswith(".dcm"):
-            image = pixel_array(image_path)
-        else:
-            image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-        image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-
-        # -- get label
-        label = row["target"]
-
-        # -- apply transformations
-        if self.transform:
-            image = self.transform(image)
-        if self.target_transform:
-            label = self.target_transform(label)
-
-        return image, label
-
-    def weights(self) -> list[float]:
-        """
-        Return the weights of each image in the dataset
-
-        :return weights: The weights of each image
-        """
-        values = self.csv["target"].value_counts()
-        weights = [1 / values[i] for i in self.csv["target"].values]
-        return weights
 
 
 def split_dataset(
     dataset: pd.DataFrame, split: float, seed: int
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Split datasets into training (train/validation) and testing sets
+    Split datasets into training (train/validation) and testing sets.
+    The dataframe must have the column 'dataset' to split the data
+    evenly between the datasets.
 
     :param dataset: DataFrame of the entire dataset
     :param split: Value to maintain in the training dataframe
     :param seed: Value to achieve reproducible results
     :return dataframes: The train and test dataframes
     """
+    # -- for each dataset, split the data
     train_df, test_df = [], []
     for _, group in dataset.groupby("dataset"):
         train_aux, test_aux = train_test_split(
@@ -103,14 +46,17 @@ def split_dataset(
         )
         train_df.append(train_aux)
         test_df.append(test_aux)
+
+    # -- merge lists in a single dataframe
     train_df = pd.concat(train_df, ignore_index=True)
     test_df = pd.concat(test_df, ignore_index=True)
+
     return train_df, test_df
 
 
 def get_dataframe(
     datasets: list[str], datasets_path: str, seed: int, split: float = 0.9
-) -> pd.DataFrame:
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Return dataframe with items of each dataset selected.
 
@@ -143,14 +89,18 @@ def get_dataframe(
         dataset_df["dataset"] = dataset
         total_df = pd.concat([total_df, dataset_df], ignore_index=True)
 
+    # -- assure that the target is an integer and the path is a string
     total_df["target"] = total_df["target"].astype(int)
     total_df["path"] = total_df["path"].astype(str)
+
+    # -- split the dataset
     train_df, test_df = split_dataset(total_df, split, seed)
+
     return train_df, test_df
 
 
 def get_dataloader(
-    dataset: ImageDataset,
+    dataset: OneViewDataset,
     batch_size: int,
     sampler_cfg: str = "",
     workers: int = 0,
@@ -191,8 +141,12 @@ def cross_validation(
     dataframe: pd.DataFrame, seed: int, folds: int = 5, id_to_label: dict = {}
 ) -> list:
     """
-    Define the k-folds for the dataset, where each patient is in only one fold.
-    :param dataframe: The dataset.
+    Define the folds for cross-validation by creating a new column in the dataframe
+
+    :param dataframe: The dataframe with the dataset
+    :param seed: The seed for reproducibility
+    :param folds: The number of folds to create
+    :param id_to_label: The dictionary to convert the target to label
     :return: The dataset with the folds
     """
     # -- create new column "fold"

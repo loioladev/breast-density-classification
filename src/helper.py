@@ -20,13 +20,11 @@ from torch.utils.data import DataLoader
 from torchmetrics import MetricCollection
 from tqdm import tqdm
 
-from datasets.dataloader import (
-    ImageDataset,
-    get_dataloader,
-)
-from src.utils.config import set_device
-from src.utils.logging import CSVLogger, convert_time
-from src.utils.plotting import plot_confusion_matrix
+from datasets.oneview_dataset import OneViewDataset
+from utils.config import set_device
+from utils.dataloader import get_dataloader
+from utils.logging import CSVLogger, convert_time
+from utils.plotting import plot_confusion_matrix
 
 logger = logging.getLogger()
 
@@ -248,7 +246,7 @@ class BinaryModelTrainer(BaseModelTrainer):
         outputs = self.model(inputs).squeeze()
         loss = self.criterion(outputs, labels)
         return outputs, loss
-    
+
 
 class MulticlassModelTrainer(BaseModelTrainer):
     """Model Trainer for multi-class classification problems"""
@@ -302,7 +300,7 @@ class BaseModelTester(ABC):
             for inputs, _ in tqdm(self.dataloader, desc="Testing"):
                 inputs = inputs.to(self.device)
                 outputs = model(inputs)
-                probabilities = torch.sigmoid(outputs) # Review this for multiclass
+                probabilities = torch.sigmoid(outputs)  # Review this for multiclass
                 all_probs.extend(probabilities.cpu().numpy())
         all_probs = np.array(all_probs)
         return all_probs
@@ -410,10 +408,10 @@ class BaseClassification(ABC):
 
         # TODO: log fold distribution
 
-        train_class = ImageDataset(
+        train_class = OneViewDataset(
             fold_train_df, self.transforms["train"], self.target_transforms["train"]
         )
-        val_class = ImageDataset(
+        val_class = OneViewDataset(
             fold_val_df, self.transforms["val"], self.target_transforms["val"]
         )
 
@@ -556,7 +554,7 @@ class BinaryClassification(BaseClassification):
             )
 
             # -- load dataloader
-            binary_class = ImageDataset(
+            binary_class = OneViewDataset(
                 binary_df, self.transforms["val"], self.target_transforms["val"]
             )
             dataloader = get_dataloader(

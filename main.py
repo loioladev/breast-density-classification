@@ -3,9 +3,9 @@ import logging
 
 import yaml
 
-from src.datasets.bmcd import BMCDConverter
-from src.datasets.inbreast import InBreastConverter
-from src.datasets.rsna import RSNAConverter
+from datasets.bmcd_converter import BMCDConverter
+from datasets.inbreast_converter import InBreastConverter
+from datasets.rsna_converter import RSNAConverter
 from src.train import main as app_main
 
 LOGGER_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

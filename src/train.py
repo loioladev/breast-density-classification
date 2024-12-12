@@ -3,18 +3,14 @@ import os
 
 import yaml
 
-from datasets.dataloader import (
-    ImageDataset,
-    cross_validation,
-    get_dataframe,
-    get_dataloader,
-)
-from src.helper import BinaryClassification
-from src.models import ModelFactory
-from src.transforms import get_transformations
-from src.utils.config import ConfigManager, set_device, set_seed
-from src.utils.logging import create_folder
-from src.utils.plotting import visualize_dataloader
+from datasets.oneview_dataset import OneViewDataset
+from helper import BinaryClassification
+from models import ModelFactory
+from transforms import get_transformations
+from utils.config import ConfigManager, set_device, set_seed
+from utils.dataloader import cross_validation, get_dataframe, get_dataloader
+from utils.logging import create_folder
+from utils.plotting import visualize_dataloader
 
 logger = logging.getLogger()
 
@@ -91,7 +87,7 @@ def main(args: dict) -> None:
     logger.info("Datasets loaded")
 
     # -- check dataloader
-    train_class = ImageDataset(train_df, transform=transformations["train"])
+    train_class = OneViewDataset(train_df, transform=transformations["train"])
     dataloader = get_dataloader(train_class, batch_size, sampler, workers=workers)
     visualize_dataloader(dataloader, id_to_label, log_folder)
 
