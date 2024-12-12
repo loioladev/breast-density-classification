@@ -5,7 +5,7 @@ import yaml
 
 from datasets.oneview_dataset import OneViewDataset
 from helper import BinaryClassification
-from models import ModelFactory
+from models.model_factory import ModelFactory
 from transforms import get_transformations
 from utils.config import ConfigManager, set_device, set_seed
 from utils.dataloader import cross_validation, get_dataframe, get_dataloader
