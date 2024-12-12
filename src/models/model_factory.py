@@ -1,7 +1,7 @@
 from typing import Any
 
 import torch.nn as nn
-from resnet_builder import ResNetBuilder
+from src.models.resnet_builder import ResNetBuilder
 
 
 class ModelFactory:

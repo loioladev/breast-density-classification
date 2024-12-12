@@ -3,12 +3,12 @@ import logging
 
 import yaml
 
-from datasets.bmcd_converter import BMCDConverter
-from datasets.inbreast_converter import InBreastConverter
-from datasets.rsna_converter import RSNAConverter
+from src.datasets.bmcd_converter import BMCDConverter
+from src.datasets.inbreast_converter import InBreastConverter
+from src.datasets.rsna_converter import RSNAConverter
 from src.train import main as app_main
 
-LOGGER_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+LOGGER_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 
 
 def create_parser() -> argparse.ArgumentParser:

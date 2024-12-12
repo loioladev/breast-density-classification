@@ -1,8 +1,6 @@
-from typing import Any
-
 import torch.nn as nn
 import torchvision.models as models
-from base_model_builder import BaseModelBuilder
+from src.models.base_model_builder import BaseModelBuilder
 
 
 class ResNetBuilder(BaseModelBuilder):

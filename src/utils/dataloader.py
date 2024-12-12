@@ -17,10 +17,10 @@ from torch.utils.data import (
     WeightedRandomSampler,
 )
 
-from datasets.bmcd_converter import BMCDConverter
-from datasets.inbreast_converter import InBreastConverter
-from datasets.oneview_dataset import OneViewDataset
-from datasets.rsna_converter import RSNAConverter
+from src.datasets.inbreast_converter import InBreastConverter
+from src.datasets.bmcd_converter import BMCDConverter
+from src.datasets.rsna_converter import RSNAConverter
+from src.datasets.oneview_dataset import OneViewDataset
 
 logger = logging.getLogger()
 
@@ -80,12 +80,9 @@ def get_dataframe(
         logger.info(f"Loading dataset {dataset}")
         dataset_path = Path(datasets_path) / dataset
         if not dataset_path.exists():
-            logger.error(f"Path {dataset_path} does not exist")
-            sys.exit()
+            raise ValueError(f"Path {dataset_path} does not exist")
 
-        dataset_df = func[dataset].get_dataset(
-            dataset_path / "metadata.csv", dataset_path / "images"
-        )
+        dataset_df = func[dataset].get_dataset(dataset_path / "metadata.csv", dataset_path / "images")        
         dataset_df["dataset"] = dataset
         total_df = pd.concat([total_df, dataset_df], ignore_index=True)
 

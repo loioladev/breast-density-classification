@@ -3,14 +3,14 @@ import os
 
 import yaml
 
-from datasets.oneview_dataset import OneViewDataset
-from helper import BinaryClassification
-from models.model_factory import ModelFactory
-from transforms import get_transformations
-from utils.config import ConfigManager, set_device, set_seed
-from utils.dataloader import cross_validation, get_dataframe, get_dataloader
-from utils.logging import create_folder
-from utils.plotting import visualize_dataloader
+from src.datasets.oneview_dataset import OneViewDataset
+from src.helper import BinaryClassification
+from src.models.model_factory import ModelFactory
+from src.transforms import get_transformations
+from src.utils.config import ConfigManager, set_device, set_seed
+from src.utils.dataloader import cross_validation, get_dataframe, get_dataloader
+from src.utils.logging import create_folder
+from src.utils.plotting import visualize_dataloader
 
 logger = logging.getLogger()
 

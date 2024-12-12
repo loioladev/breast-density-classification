@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import pydicom
 
-from datasets.base_converter import BaseConverter
+from src.datasets.base_converter import BaseConverter
 from src.utils.processing import left_side_breast, recort_breast_morp
 
 logger = logging.getLogger()
@@ -129,7 +129,7 @@ class BMCDConverter(BaseConverter):
         logger.info("BMCD dataset processed")
 
     @classmethod
-    def get_dataset(csv_path: str | Path, image_path: str | Path) -> pd.DataFrame:
+    def get_dataset(cls, csv_path: str | Path, image_path: str | Path) -> pd.DataFrame:
         """
         Modify the BMCD dataset to the training model format, adding the columns
         'path' and 'target' to the DataFrame.

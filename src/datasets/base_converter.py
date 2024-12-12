@@ -65,9 +65,9 @@ class BaseConverter(ABC):
         """
         pass
 
-    @abstractmethod
     @classmethod
-    def get_dataset(csv_path: str | Path, image_path: str | Path) -> pd.DataFrame:
+    @abstractmethod
+    def get_dataset(cls, csv_path: str | Path, image_path: str | Path) -> pd.DataFrame:
         """
         From the converted CSV file, create a DataFrame with the columns 'path' and 'target'.
 

@@ -20,11 +20,11 @@ from torch.utils.data import DataLoader
 from torchmetrics import MetricCollection
 from tqdm import tqdm
 
-from datasets.oneview_dataset import OneViewDataset
-from utils.config import set_device
-from utils.dataloader import get_dataloader
-from utils.logging import CSVLogger, convert_time
-from utils.plotting import plot_confusion_matrix
+from src.datasets.oneview_dataset import OneViewDataset
+from src.utils.config import set_device
+from src.utils.dataloader import get_dataloader
+from src.utils.logging import CSVLogger, convert_time
+from src.utils.plotting import plot_confusion_matrix
 
 logger = logging.getLogger()
 
