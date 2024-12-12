@@ -38,16 +38,21 @@ class BaseConverter(ABC):
             )
 
     @abstractmethod
-    def process_dicom(self):
+    def process_dicom(self, dicom_path: Path, output: Path) -> None:
         """
         Convert the DICOM file to PNG with the respect transformations of the dataset
-        and save it in the output directory
+        and save it in the output directory. The images should be normalized and flipped
+        to the right orientation.
+
+        :param dicom_path: Path to the DICOM file
+        :param output: Path to the output directory of images
         """
         pass
 
     @abstractmethod
     def process_csv(self) -> None:
-        """Convert the original CSV file to the desired format and save it to the output directory"""
+        """Convert the original CSV file to the desired format and save it to the output directory.
+        The CSV file must be saved with the name 'metadata.csv'"""
         pass
 
     @abstractmethod

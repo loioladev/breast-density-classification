@@ -36,6 +36,8 @@ To download it, you need to create an account on Kaggle and download the [datase
 
 ### Preprocessing
 
+The dataset is in DICOM format, so it is necessary to convert it to PNG. The script `rsna.py` does this conversion. It converts the DICOM to PNG using the `pydicom` library, and a function to recort the breast from the image is applied in the end. Before that, the image is normalized to the interval [0, 255] and a windowing filter is applied to improve the contrast.
+
 ## VinDr Mammo
 
 The [VinDr-Mammo](https://www.physionet.org/content/vindr-mammo/1.0.0/) dataset is a large-scale full-field digital mammography dataset, which can be used for the purpose of developing and evaluating algorithms for providing cancer assessment and breast density following the Breast Imaging Report and Data System (BI-RADS). The dataset is split into 1,000 test exams and 4,000 training exams, with the frequencies of each BI-RADS category, density level, and abnormality category being preserved by applying an iterative stratification algorithm.
