@@ -15,8 +15,8 @@ import numpy as np
 import pandas as pd
 import pydicom
 
-from src.datasets.baseconverter import BaseConverter
-from src.utils.processing import recort_breast_morp
+from datasets.base import BaseConverter
+from src.utils.processing import left_side_breast, recort_breast_morp
 
 logger = logging.getLogger()
 
@@ -40,12 +40,12 @@ class BMCDConverter(BaseConverter):
         image = pydicom.pixel_array(ds)
         image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
 
+        # -- flip image if it is right side breast
+        if not left_side_breast(image):
+            image = cv2.flip(image, 1)
+
         # -- crop breast region
         image, _ = recort_breast_morp(image)
-
-        # -- flip image if it is right breast
-        if ds.ImageLaterality == "R":
-            image = cv2.flip(image, 1)
 
         # -- create new name for image and save it
         file_id = dicom_path.parent.name
@@ -128,7 +128,8 @@ class BMCDConverter(BaseConverter):
 
         logger.info("BMCD dataset processed")
 
-    def get_dataset(self, csv_path: str | Path, image_path: str | Path) -> pd.DataFrame:
+    @classmethod
+    def get_dataset(csv_path: str | Path, image_path: str | Path) -> pd.DataFrame:
         """
         Modify the BMCD dataset to the training model format, adding the columns
         'path' and 'target' to the DataFrame.
@@ -148,7 +149,8 @@ class BMCDConverter(BaseConverter):
         )
         df["path"] = df.apply(
             lambda row: image_path
-            / f"{row['case']}_{row['number']}_{row['view']}_{row['status']}.png"
+            / f"{row['case']}_{row['number']}_{row['view']}_{row['status']}.png",
+            axis=1,
         )
         df = df[["path", "target"]]
         return df

@@ -1,3 +1,7 @@
+"""
+TODO: Add a description
+"""
+
 import logging
 from pathlib import Path
 
@@ -7,8 +11,8 @@ import numpy as np
 import pandas as pd
 import pydicom
 
-from src.datasets.baseconverter import BaseConverter
-from src.utils.processing import apply_windowing, recort_breast_morp
+from datasets.base import BaseConverter
+from src.utils.processing import apply_windowing, left_side_breast, recort_breast_morp
 
 logger = logging.getLogger()
 
@@ -46,6 +50,10 @@ class RSNAConverter(BaseConverter):
         # -- invert image
         if ds.PhotometricInterpretation == "MONOCHROME1":
             img = 255 - img
+
+        # -- flip image if it is right side breast
+        if not left_side_breast(img):
+            img = cv2.flip(img, 1)
 
         # -- recort breast region
         img, _ = recort_breast_morp(img)
@@ -93,7 +101,8 @@ class RSNAConverter(BaseConverter):
 
         logger.info("RSNA dataset processed")
 
-    def get_dataset(self, csv_path: str | Path, image_path: str | Path) -> pd.DataFrame:
+    @classmethod
+    def get_dataset(csv_path: str | Path, image_path: str | Path) -> pd.DataFrame:
         """
         Modify the RSNA dataset to the training model format, adding the columns
         'path' and 'target' to the DataFrame.
@@ -113,6 +122,7 @@ class RSNAConverter(BaseConverter):
         )
         df["path"] = df.apply(
             lambda row: image_path / f"{row['patient_id']}@{row['image_id']}.png",
+            axis=1,
         )
         df = df[["path", "target"]]
         return df

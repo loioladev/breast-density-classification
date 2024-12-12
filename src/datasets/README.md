@@ -12,7 +12,7 @@ The datasets used in this project are:
 - [Mini-DDSM](#mini-ddsm)
 - [BMCD](#bmcd)
 
-For all datasets, the metadata is stored in a CSV file with name "metadata.csv". The images are flipped to the right orientation, and the breast is cropped from the image. The images are normalized to `uint8` in order to apply the operations from opencv. A BaseConverter class is used to define the methods to convert the images and metadata to the desired format.
+For all datasets, the metadata is stored in a CSV file with name "metadata.csv". The images are flipped to the left orientation, and the breast is cropped from the image. The images are normalized to `uint8` in order to apply the operations from opencv. A BaseConverter class is used to define the methods to convert the images and metadata to the desired format.
 
 ## InBreast
 

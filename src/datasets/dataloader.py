@@ -4,8 +4,8 @@ dataloader of the selected datasets to use
 """
 
 import logging
-import os
 import sys
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -20,8 +20,9 @@ from torch.utils.data import (
     WeightedRandomSampler,
 )
 
-from src.datasets.inbreast import get_inbreast
-from src.datasets.bmcd import get_bmcd
+from src.datasets.bmcd import BMCDConverter
+from src.datasets.inbreast import InBreastConverter
+from src.datasets.rsna import RSNAConverter
 
 logger = logging.getLogger()
 
@@ -121,22 +122,23 @@ def get_dataframe(
     :param split: Quantity to maintain in training dataframe
     :return dataframe: A DataFrame object containing the targets and paths.
     """
-    func = {"inbreast": get_inbreast,
-            "bmcd": get_bmcd,
-            }
     total_df = pd.DataFrame(columns=["target", "path", "dataset"])
+    func = {
+        "inbreast": InBreastConverter,
+        "bmcd": BMCDConverter,
+        "rsna": RSNAConverter,
+    }
 
     # -- merge all datasets
     for dataset in datasets:
         logger.info(f"Loading dataset {dataset}")
-        dataset_path = os.path.join(datasets_path, dataset)
-        if not os.path.exists(dataset_path):
+        dataset_path = Path(datasets_path) / dataset
+        if not dataset_path.exists():
             logger.error(f"Path {dataset_path} does not exist")
             sys.exit()
 
-        dataset_df = func[dataset](
-            os.path.join(dataset_path, "metadata.csv"),
-            os.path.join(dataset_path, "images"),
+        dataset_df = func[dataset].get_dataset(
+            dataset_path / "metadata.csv", dataset_path / "images"
         )
         dataset_df["dataset"] = dataset
         total_df = pd.concat([total_df, dataset_df], ignore_index=True)
@@ -180,7 +182,7 @@ def get_dataloader(
         shuffle=shuffle,
         sampler=sampler,
         num_workers=workers,
-        drop_last=True, # -- drop last batch if it is not complete
+        drop_last=True,  # -- drop last batch if it is not complete
     )
     return dataloader
 

@@ -51,17 +51,23 @@ class BaseConverter(ABC):
 
     @abstractmethod
     def process_csv(self) -> None:
-        """Convert the original CSV file to the desired format and save it to the output directory.
-        The CSV file must be saved with the name 'metadata.csv'"""
+        """Convert the original CSV file to the desired format and save it to the output directory."""
         pass
 
     @abstractmethod
-    def convert_dataset(self) -> None:
-        """Convert the original dataset to the desired format and save it to the output directory."""
+    def convert_dataset(self, workers: int = 1) -> None:
+        """
+        Convert the original dataset to the desired format and save it to the output directory.
+        The images should be saved in a folder called 'images' and the CSV file with the name
+        'metadata.csv'. This function should call the 'start_dicom_conversion' and 'process_csv'
+
+        :param workers: Number of workers to use
+        """
         pass
 
     @abstractmethod
-    def get_dataset(self, csv_path: str | Path, image_path: str | Path) -> pd.DataFrame:
+    @classmethod
+    def get_dataset(csv_path: str | Path, image_path: str | Path) -> pd.DataFrame:
         """
         From the converted CSV file, create a DataFrame with the columns 'path' and 'target'.
 

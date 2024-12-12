@@ -3,8 +3,9 @@ import logging
 
 import yaml
 
-from src.datasets.bmcd import convert_bmcd
-from src.datasets.inbreast import convert_inbreast
+from src.datasets.bmcd import BMCDConverter
+from src.datasets.inbreast import InBreastConverter
+from src.datasets.rsna import RSNAConverter
 from src.train import main as app_main
 
 LOGGER_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -74,15 +75,21 @@ def convert(dataset: str, path: str, output: str, processes: int) -> None:
     :param output: Path to the output directory
     :param processes: Number of processes to use
     """
-    logging.basicConfig(format=LOGGER_FORMAT, datefmt="%Y-%m-%d %H:%M:%S", level=logging.DEBUG)
+    logging.basicConfig(
+        format=LOGGER_FORMAT, datefmt="%Y-%m-%d %H:%M:%S", level=logging.DEBUG
+    )
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
     # -- start conversion
-    if dataset == "inbreast":
-        convert_inbreast(path, output, processes)
-    if dataset == "bmcd":
-        convert_bmcd(path, output, processes)
+    datasets = {
+        "inbreast": InBreastConverter,
+        "bmcd": BMCDConverter,
+        "rsna": RSNAConverter,
+    }
+
+    converter = datasets[dataset](path, output)
+    converter.convert_dataset(processes)
 
 
 def train(fname: str) -> None:
@@ -91,7 +98,9 @@ def train(fname: str) -> None:
 
     :param fname: name of config file to load
     """
-    logging.basicConfig(format=LOGGER_FORMAT, datefmt="%Y-%m-%d %H:%M:%S", level=logging.DEBUG)
+    logging.basicConfig(
+        format=LOGGER_FORMAT, datefmt="%Y-%m-%d %H:%M:%S", level=logging.DEBUG
+    )
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 

@@ -8,6 +8,8 @@ import logging
 
 import cv2
 import numpy as np
+import pydicom
+import torch
 from skimage.morphology import binary_closing, binary_opening, dilation, disk, erosion
 
 logger = logging.getLogger()
@@ -94,3 +96,65 @@ def recort_breast_morp(
     x, y, w, h = cv2.boundingRect(largest_contour)
     image = image[y : y + h, x : x + w]
     return image, (x, y, w, h)
+
+
+def apply_windowing(
+    image: np.ndarray | torch.Tensor, ds: pydicom.Dataset
+) -> np.ndarray:
+    """
+    Apply the windowing to the image using the DICOM metadata. The windowing
+    is a technique to adjust the contrast and brightness of the image.
+
+    :param image: Image to be processed
+    :param ds: DICOM metadata
+    :return: Processed image
+    """
+
+    # -- obtain the windowing parameters
+    voi_func = ds.get("VOILUTFunction", "LINEAR").upper()
+    window_width = ds.get("WindowWidth", [])
+    window_center = ds.get("WindowCenter", [])
+    try:
+        if not isinstance(window_center, list):
+            window_center = [window_center]
+        window_center = [float(x) for x in window_center]
+        if not isinstance(window_width, list):
+            window_width = [window_width]
+        window_width = [float(x) for x in window_width]
+    except (TypeError, ValueError):
+        window_center = []
+        window_width = []
+
+    if not window_width:
+        logger.debug("No windowing parameters found")
+        return image
+
+    # -- convert the image to a tensor
+    if isinstance(arr, np.ndarray):
+        arr = torch.from_numpy(arr)
+
+    # -- apply the windowing
+    y_max = 255
+    y_min = 0
+    y_range = y_max - y_min
+    image = image.float()
+    if voi_func == "LINEAR" or voi_func == "LINEAR_EXACT":
+        # -- dicom PS3.3 C.11.2.1.2.1 and C.11.2.1.3.2
+        if voi_func == "LINEAR":
+            if window_width < 1:
+                raise ValueError(
+                    "The (0028,1051) Window Width must be greater than or "
+                    "equal to 1 for a 'LINEAR' windowing operation"
+                )
+            window_center -= 0.5
+            window_width -= 1
+        s = y_range / window_width
+        b = (-window_center / window_width + 0.5) * y_range + y_min
+        image = image * s + b
+        image = torch.clamp(image, y_min, y_max)
+    elif voi_func == "SIGMOID":
+        s = -4 / window_width
+        image = y_range / (1 + torch.exp((image - window_center) * s)) + y_min
+    else:
+        raise ValueError(f"Unsupported (0028,1056) VOI LUT Function value '{voi_func}'")
+    return image.numpy()
