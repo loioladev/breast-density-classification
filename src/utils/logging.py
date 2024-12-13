@@ -1,12 +1,12 @@
 import os
-
+from pathlib import Path
 
 class CSVLogger(object):
     """
     Class to handle the logging of the metrics
     """
 
-    def __init__(self, log_path: str, *argv: list) -> None:
+    def __init__(self, log_path: str | Path, *argv: list) -> None:
         """
         Constructor of the class
 
@@ -14,6 +14,9 @@ class CSVLogger(object):
         :param *argv: List of tuples, where each tuple contains the format
         and the label of the column
         """
+        if isinstance(log_path, Path):
+            log_path = str(log_path)
+        
         self.train_path = log_path + "/train_metrics.csv"
         self.val_path = log_path + "/val_metrics.csv"
         self.types = [v[0] for v in argv]

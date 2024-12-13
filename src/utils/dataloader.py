@@ -129,7 +129,7 @@ def get_dataloader(
         shuffle=shuffle,
         sampler=sampler,
         num_workers=workers,
-        drop_last=True,  # -- drop last batch if it is not complete
+        # drop_last=True,  # -- drop last batch if it is not complete
     )
     return dataloader
 

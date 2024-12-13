@@ -4,13 +4,13 @@ import os
 import yaml
 
 from src.datasets.oneview_dataset import OneViewDataset
-from src.helper import BinaryClassification
 from src.models.model_factory import ModelFactory
 from src.transforms import get_transformations
 from src.utils.config import ConfigManager, set_device, set_seed
 from src.utils.dataloader import cross_validation, get_dataframe, get_dataloader
 from src.utils.logging import create_folder
 from src.utils.plotting import visualize_dataloader
+from src.workflow.binary.model_classifier import BinaryModelClassifier
 
 logger = logging.getLogger()
 
@@ -128,7 +128,7 @@ def main(args: dict) -> None:
     metrics = ConfigManager.get_metrics(metric_types, metric_args)
 
     # -- initialize binary classification
-    binary_classification = BinaryClassification(
+    binary_classification = BinaryModelClassifier(
         log_folder,
         model,
         loss,
