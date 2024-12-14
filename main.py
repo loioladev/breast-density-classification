@@ -27,7 +27,7 @@ def create_parser() -> argparse.ArgumentParser:
     parser_convert.add_argument(
         "dataset",
         type=str,
-        choices=["inbreast", "bmcd"],
+        choices=["inbreast", "bmcd", "rsna", "vindr", "miniddsm"],
         help="Dataset to convert",
     )
     parser_convert.add_argument(
@@ -86,9 +86,16 @@ def convert(dataset: str, path: str, output: str, processes: int) -> None:
         "inbreast": InBreastConverter,
         "bmcd": BMCDConverter,
         "rsna": RSNAConverter,
+        "vindr": None,
+        "miniddsm": None,
     }
 
-    converter = datasets[dataset](path, output)
+    converter = datasets.get(dataset, None)
+    if not converter:
+        logger.error(f"Dataset {dataset} not supported")
+        return
+
+    converter = converter(path, output)
     converter.convert_dataset(processes)
 
 
