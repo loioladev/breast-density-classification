@@ -112,6 +112,7 @@ class InBreastConverter(BaseConverter):
 
         :param workers: Number of workers to use
         """
+        logger.info("Processing InBreast dataset")
         if not self.dataset_dir.exists():
             raise FileNotFoundError(f"Path {self.dataset_dir} does not exist")
 
@@ -124,6 +125,7 @@ class InBreastConverter(BaseConverter):
         if not csv_path.exists():
             raise FileNotFoundError(f"Path {csv_path} does not exist")
 
+        logger.info("Processing InBreast DICOMs")
         dicom_files = list(dicom_path.rglob("*.dcm"))
         self.start_dicom_conversion(dicom_files, workers)
         self.process_csv(csv_path)
