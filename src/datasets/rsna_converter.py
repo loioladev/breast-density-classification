@@ -64,6 +64,7 @@ class RSNAConverter(BaseConverter):
         df = pd.read_csv(csv_path)
         df = df[df["implant"] == 0]
         df = df[["patient_id", "image_id", "density", "laterality", "view", "age"]]
+        df = df.dropna(subset=["density"])
         output = self.dataset_output / "metadata.csv"
         df.to_csv(output, index=False)
 
