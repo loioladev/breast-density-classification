@@ -6,6 +6,7 @@ import yaml
 from src.datasets.bmcd_converter import BMCDConverter
 from src.datasets.inbreast_converter import InBreastConverter
 from src.datasets.rsna_converter import RSNAConverter
+from src.datasets.miniddsm_converter import MiniDDSMConverter
 from src.train import main as app_main
 
 LOGGER_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
@@ -46,8 +47,8 @@ def create_parser() -> argparse.ArgumentParser:
         "-p",
         "--processes",
         type=int,
-        help="Number of processes to use",
-        default=1,
+        help="Number of processes to use. Default to -1 (.8 of the CPU cores)",
+        default=-1,
     )
     parser_convert.set_defaults(
         func=lambda args: convert(args.dataset, args.path, args.output, args.processes)
@@ -86,8 +87,8 @@ def convert(dataset: str, path: str, output: str, processes: int) -> None:
         "inbreast": InBreastConverter,
         "bmcd": BMCDConverter,
         "rsna": RSNAConverter,
+        "miniddsm": MiniDDSMConverter,
         "vindr": None,
-        "miniddsm": None,
     }
 
     converter = datasets.get(dataset, None)
