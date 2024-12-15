@@ -2,6 +2,7 @@ import concurrent
 from concurrent.futures import ProcessPoolExecutor
 from abc import ABC, abstractmethod
 from pathlib import Path
+import os
 
 import pandas as pd
 from tqdm import tqdm
@@ -22,7 +23,7 @@ class BaseConverter(ABC):
         self.dataset_dir = Path(dataset_dir)
         self.dataset_output = Path(dataset_output)
 
-    def start_dicom_conversion(self, files: list[Path], workers: int = 1) -> None:
+    def start_dicom_conversion(self, files: list[Path], workers: int = -1) -> None:
         """
         Start the DICOM conversion process with the given files. It creates a new directory
         called 'images' in the output directory and saves the converted images there
@@ -33,6 +34,9 @@ class BaseConverter(ABC):
         """
         output = self.dataset_output / "images"
         output.mkdir(parents=True, exist_ok=True)
+
+        if workers == -1:
+            workers = int(os.cpu_count() * 0.8)
 
         file_args = [(file, output) for file in files]
         with ProcessPoolExecutor(max_workers=workers) as executor:

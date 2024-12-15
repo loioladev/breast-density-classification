@@ -10,6 +10,7 @@ import dicomsdl
 import numpy as np
 import pandas as pd
 import pydicom
+import pydicom.pixels
 
 from src.datasets.base_converter import BaseConverter
 from src.utils.processing import apply_windowing, left_side_breast, recort_breast_morp
@@ -30,15 +31,7 @@ class RSNAConverter(BaseConverter):
         :param output: Path to the output directory
         """
         # -- read dicom file
-        dicom = dicomsdl.open(str(dicom_path))
-        info = dicom.getPixelDataInfo()
-        if info["SamplesPerPixel"] != 1:
-            raise RuntimeError("SamplesPerPixel != 1")
-        else:
-            shape = [info["Rows"], info["Cols"]]
-        ori_dtype = info["dtype"]
-        image = np.empty(shape, dtype=ori_dtype)
-        dicom.copyFrameData(0, image)
+        image = pydicom.pixel_array(dicom_path)
 
         # -- apply windowing
         ds = pydicom.dcmread(str(dicom_path), stop_before_pixels=True)
@@ -51,12 +44,12 @@ class RSNAConverter(BaseConverter):
         if ds.PhotometricInterpretation == "MONOCHROME1":
             img = 255 - img
 
+        # -- recort breast region
+        img, _ = recort_breast_morp(img)
+
         # -- flip image if it is right side breast
         if not left_side_breast(img):
             img = cv2.flip(img, 1)
-
-        # -- recort breast region
-        img, _ = recort_breast_morp(img)
 
         # -- save image
         output_image = output / f"{dicom_path.parent.name}@{dicom_path.stem}.png"
@@ -70,7 +63,7 @@ class RSNAConverter(BaseConverter):
         """
         df = pd.read_csv(csv_path)
         df = df[df["implant"] == 0]
-        df = [["patient_id", "image_id", "density", "laterality", "view", "age"]]
+        df = df[["patient_id", "image_id", "density", "laterality", "view", "age"]]
         output = self.dataset_output / "metadata.csv"
         df.to_csv(output, index=False)
 
@@ -86,7 +79,7 @@ class RSNAConverter(BaseConverter):
         if not self.dataset_dir.exists():
             raise FileNotFoundError(f"Path {self.dataset_dir} does not exist")
 
-        dicom_dir = self.dataset_dir / "images"
+        dicom_dir = self.dataset_dir / "train_images"
         csv_path = self.dataset_dir / "train.csv"
 
         if not dicom_dir.exists():
