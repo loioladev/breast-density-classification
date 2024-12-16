@@ -11,6 +11,8 @@ from src.utils.dataloader import cross_validation, get_dataframe, get_dataloader
 from src.utils.logging import create_folder
 from src.utils.plotting import visualize_dataloader
 from src.workflow.binary.model_classifier import BinaryModelClassifier
+from src.utils.logging import log_csv_information
+from pathlib import Path
 
 logger = logging.getLogger()
 
@@ -84,7 +86,9 @@ def main(args: dict) -> None:
     # -- load datasets
     train_df, test_df = get_dataframe(datasets, datasets_path, seed)
     train_df = cross_validation(train_df, seed, kfolds, id_to_label)
-    logger.info("Datasets loaded")
+    log_csv_information(train_df, Path(log_folder) / "train_stats.txt")
+    log_csv_information(test_df, Path(log_folder) / "test_stats.txt", is_test=True)
+    logger.info("Datasets loaded. Statistics saved in log folder")
 
     # -- check dataloader
     train_class = OneViewDataset(train_df, transform=transformations["train"])

@@ -149,10 +149,6 @@ class InBreastConverter(BaseConverter):
 
         df = pd.read_csv(csv_path)
         df["target"] = df["density"].apply(lambda x: int(x) - 1)
-        df["path"] = df.apply(
-            lambda row: image_path
-            / f"{row['filename']}_{row['laterality']}_{row['view']}.png",
-            axis=1,
-        )
+        df["path"] = df.apply(lambda row: image_path / f"{row['filename']}_{row['laterality']}_{row['view']}.png", axis=1)
         df = df[["path", "target"]]
         return df

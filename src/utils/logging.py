@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import pandas as pd
 
 class CSVLogger(object):
     """
@@ -76,3 +77,38 @@ def convert_time(seconds: int) -> str:
     m, s = divmod(seconds, 60)
     h, m = divmod(m, 60)
     return f"{int(h):02d}:{int(m):02d}:{int(s):02d}"
+
+
+def log_csv_information(df: pd.DataFrame, output_path: Path, is_test: bool = False) -> None:
+    """
+    Save the information of the dataframe to files in the same directory.
+
+    :param df: The dataframe to save
+    :param output_path: The path to the output directory
+    :param is_test: If the dataframe is to test
+    """
+    stats_text = []
+
+    # -- overall statistics
+    overall_counts = df['target'].value_counts().sort_index()
+    stats_text.append("Overall Target Distribution:\n")
+    stats_text.extend([f"Target {k}: {v}\n" for k, v in overall_counts.items()])
+
+    # -- dataset-wise statistics
+    stats_text.append("\nTarget Distribution by Dataset:\n")
+    dataset_group = df.groupby(['dataset', 'target']).size().unstack(fill_value=0)
+    for dataset in dataset_group.index:
+        stats_text.append(f"Dataset: {dataset}\n")
+        stats_text.extend([f"  Target {k}: {v}\n" for k, v in dataset_group.loc[dataset].items()])
+
+    # -- fold-wise statistics
+    if not is_test:
+        stats_text.append("\nTarget Distribution by Fold:\n")
+        fold_group = df.groupby(['fold', 'target']).size().unstack(fill_value=0)
+        for fold in fold_group.index:
+            stats_text.append(f"Fold: {fold}\n")
+            stats_text.extend([f"  Target {k}: {v}\n" for k, v in fold_group.loc[fold].items()])
+
+    # -- save statistics to a text file
+    with open(output_path, "w") as f:
+        f.writelines(stats_text)

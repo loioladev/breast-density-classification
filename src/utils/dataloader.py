@@ -20,6 +20,7 @@ from torch.utils.data import (
 from src.datasets.inbreast_converter import InBreastConverter
 from src.datasets.bmcd_converter import BMCDConverter
 from src.datasets.rsna_converter import RSNAConverter
+from src.datasets.miniddsm_converter import MiniDDSMConverter
 from src.datasets.oneview_dataset import OneViewDataset
 
 logger = logging.getLogger()
@@ -42,7 +43,7 @@ def split_dataset(
     train_df, test_df = [], []
     for _, group in dataset.groupby("dataset"):
         train_aux, test_aux = train_test_split(
-            group, train_size=split, random_state=seed
+            group, test_size=1.0-split, random_state=seed
         )
         train_df.append(train_aux)
         test_df.append(test_aux)
@@ -73,18 +74,39 @@ def get_dataframe(
         "inbreast": InBreastConverter,
         "bmcd": BMCDConverter,
         "rsna": RSNAConverter,
+        "miniddsm": MiniDDSMConverter,
+        "vindr": None,
     }
 
     # -- merge all datasets
+    not_found = []
     for dataset in datasets:
         logger.info(f"Loading dataset {dataset}")
         dataset_path = Path(datasets_path) / dataset
         if not dataset_path.exists():
             raise ValueError(f"Path {dataset_path} does not exist")
+        
+        if dataset not in func:
+            raise ValueError(f"Dataset {dataset} not found in the available datasets")
 
-        dataset_df = func[dataset].get_dataset(dataset_path / "metadata.csv", dataset_path / "images")        
+        dataset_df = func[dataset].get_dataset(dataset_path / "metadata.csv", dataset_path / "images")   
+
+        # -- check if path exists
+        for image_path in dataset_df["path"]:
+            image_path = Path(image_path)
+            if not image_path.exists():
+                not_found.append(image_path)
+                print(str(image_path))
+
         dataset_df["dataset"] = dataset
         total_df = pd.concat([total_df, dataset_df], ignore_index=True)
+
+    # -- remove items not found
+    # -- TODO: investigate before reaching this step
+    if not_found:
+        logger.warning(f"Images not found: {len(not_found)}")
+        logger.debug(f"Images not found: {not_found}")
+        dataset_df = dataset_df[~dataset_df["path"].isin(not_found)]
 
     # -- assure that the target is an integer and the path is a string
     total_df["target"] = total_df["target"].astype(int)

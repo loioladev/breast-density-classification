@@ -47,8 +47,8 @@ def create_parser() -> argparse.ArgumentParser:
         "-p",
         "--processes",
         type=int,
-        help="Number of processes to use. Default to -1 (.8 of the CPU cores)",
-        default=-1,
+        help="Number of processes to use. Default to 1",
+        default=1,
     )
     parser_convert.set_defaults(
         func=lambda args: convert(args.dataset, args.path, args.output, args.processes)

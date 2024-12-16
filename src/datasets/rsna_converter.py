@@ -6,7 +6,6 @@ import logging
 from pathlib import Path
 
 import cv2
-import dicomsdl
 import numpy as np
 import pandas as pd
 import pydicom
@@ -31,29 +30,29 @@ class RSNAConverter(BaseConverter):
         :param output: Path to the output directory
         """
         # -- read dicom file
-        image = pydicom.pixel_array(dicom_path)
+        image = pydicom.pixel_array(str(dicom_path))
 
         # -- apply windowing
         ds = pydicom.dcmread(str(dicom_path), stop_before_pixels=True)
         image = apply_windowing(image, ds)
 
         # -- normalize pixel values to 0-255
-        img = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
+        image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
 
         # -- invert image
         if ds.PhotometricInterpretation == "MONOCHROME1":
-            img = 255 - img
+            image = 255 - image
 
         # -- recort breast region
-        img, _ = recort_breast_morp(img)
+        image, _ = recort_breast_morp(image)
 
         # -- flip image if it is right side breast
-        if not left_side_breast(img):
-            img = cv2.flip(img, 1)
+        if not left_side_breast(image):
+            image = cv2.flip(image, 1)
 
         # -- save image
         output_image = output / f"{dicom_path.parent.name}@{dicom_path.stem}.png"
-        cv2.imwrite(str(output_image), img)
+        cv2.imwrite(str(output_image), image)
 
     def process_csv(self, csv_path: Path) -> None:
         """
@@ -114,9 +113,6 @@ class RSNAConverter(BaseConverter):
         df["target"] = df["density"].apply(
             lambda x: {"A": 0, "B": 1, "C": 2, "D": 3}[x]
         )
-        df["path"] = df.apply(
-            lambda row: image_path / f"{row['patient_id']}@{row['image_id']}.png",
-            axis=1,
-        )
+        df["path"] = df.apply(lambda row: image_path / f"{row['patient_id']}@{row['image_id']}.png", axis=1)
         df = df[["path", "target"]]
         return df

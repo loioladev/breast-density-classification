@@ -54,8 +54,7 @@ class MiniDDSMConverter(BaseConverter):
         image = cv2.imread(str(dicom_path), cv2.IMREAD_GRAYSCALE)
 
         # -- convert to 8-bit image
-        ratio = np.amax(image) / 256
-        image = (image / ratio).astype("uint8")
+        image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
 
         # -- flip image if it is right side breast
         if not left_side_breast(image):
@@ -90,16 +89,15 @@ class MiniDDSMConverter(BaseConverter):
         # -- create new dataframe 
         rows = []
         for _, row in df.iterrows():
+            if str(row["Density"]) not in ["1", "2", "3", "4"]:
+                continue
             filename = Path(row["fileName"]).stem
             density = row["Density"]
             age = row["Age"]
             items = filename.split(".")
-            case, id_, number = items[0].split("_")
             laterality, view = items[1].split("_")
             rows.append({
-                    "case": case,
-                    "id": id_,
-                    "number": number,
+                    "case_id_number": items[0],
                     "laterality": laterality,
                     "view": view,
                     "density": density,
@@ -155,10 +153,6 @@ class MiniDDSMConverter(BaseConverter):
 
         df = pd.read_csv(csv_path)
         df["target"] = df["density"].apply(lambda x: int(x) - 1)
-        df["path"] = df.apply(
-            lambda row: image_path
-            / f"{row['case']}_{row['id']}_{row['number']}.{row['laterality']}_{row['view']}.png",
-            axis=1,
-        )
+        df["path"] = df.apply(lambda row: image_path / f"{row['case_id_number']}.{row['laterality']}_{row['view']}.png", axis=1)
         df = df[["path", "target"]]
         return df

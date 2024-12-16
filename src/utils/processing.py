@@ -129,9 +129,12 @@ def apply_windowing(
         logger.debug("No windowing parameters found")
         return image
 
+    window_width = window_width[0]
+    window_center = window_center[0]
+
     # -- convert the image to a tensor
-    if isinstance(arr, np.ndarray):
-        arr = torch.from_numpy(arr)
+    if isinstance(image, np.ndarray):
+        image = torch.from_numpy(image)
 
     # -- apply the windowing
     y_max = 255

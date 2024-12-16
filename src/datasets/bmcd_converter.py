@@ -148,9 +148,6 @@ class BMCDConverter(BaseConverter):
             lambda x: {"a": 0, "b": 1, "c": 2, "d": 3}[x]
         )
         df["path"] = df.apply(
-            lambda row: image_path
-            / f"{row['case']}_{row['number']}_{row['view']}_{row['status']}.png",
-            axis=1,
-        )
+            lambda row: image_path / f"{row['case']}_{row['number']}_{row['view']}_{row['status']}.png", axis=1)
         df = df[["path", "target"]]
         return df
