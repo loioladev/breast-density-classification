@@ -36,4 +36,6 @@ class ModelFactory:
             pretrained=pretrained,
         )
 
+        model = nn.DataParallel(model)
+
         return model
