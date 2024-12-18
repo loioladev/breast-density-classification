@@ -1,4 +1,5 @@
-import multiprocessing
+import concurrent
+from concurrent.futures import ProcessPoolExecutor
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -38,9 +39,13 @@ class BaseConverter(ABC):
                 self.process_dicom(dicom_path, output)
             return
 
-        args = [(dicom_path, output) for dicom_path in files]
-        with multiprocessing.Pool(workers) as pool:
-            pool.starmap(self.process_dicom, args)
+        file_args = [(file, output) for file in files]
+        with ProcessPoolExecutor(max_workers=workers) as executor:
+            # -- submit all tasks
+            futures = [executor.submit(self.process_dicom, *args) for args in file_args]
+            
+            # -- wait for all tasks to finish and show a progress bar
+            [_ for _ in tqdm(concurrent.futures.as_completed(futures), total=len(files), desc="Processing DICOMs")]
 
 
     @abstractmethod
