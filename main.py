@@ -7,6 +7,7 @@ from src.datasets.bmcd_converter import BMCDConverter
 from src.datasets.inbreast_converter import InBreastConverter
 from src.datasets.rsna_converter import RSNAConverter
 from src.datasets.miniddsm_converter import MiniDDSMConverter
+from src.datasets.vindr_converter import VinDrConverter
 from src.train import main as app_main
 
 LOGGER_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
@@ -88,7 +89,7 @@ def convert(dataset: str, path: str, output: str, processes: int) -> None:
         "bmcd": BMCDConverter,
         "rsna": RSNAConverter,
         "miniddsm": MiniDDSMConverter,
-        "vindr": None,
+        "vindr": VinDrConverter,
     }
 
     converter = datasets.get(dataset, None)

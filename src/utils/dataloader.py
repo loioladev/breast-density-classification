@@ -21,6 +21,7 @@ from src.datasets.inbreast_converter import InBreastConverter
 from src.datasets.bmcd_converter import BMCDConverter
 from src.datasets.rsna_converter import RSNAConverter
 from src.datasets.miniddsm_converter import MiniDDSMConverter
+from src.datasets.vindr_converter import VinDrConverter
 from src.datasets.oneview_dataset import OneViewDataset
 
 logger = logging.getLogger()
@@ -75,7 +76,7 @@ def get_dataframe(
         "bmcd": BMCDConverter,
         "rsna": RSNAConverter,
         "miniddsm": MiniDDSMConverter,
-        "vindr": None,
+        "vindr": VinDrConverter,
     }
 
     # -- merge all datasets
