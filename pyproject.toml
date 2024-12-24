@@ -1,9 +1,58 @@
 [project]
-name = "breast-density-ai"
+name = "breast-density-classification"
 version = "0.1.0"
 description = "Breast density classification using CNNs"
+authors = [{name = "Matheus Loiola Pinto Curado Silva", email = "matheusloiolapinto@gmail.com"}]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
+    "focal-loss-torch>=0.1.2",
+    "gdcm>=1.1",
     "loguru>=0.7.2",
+    "matplotlib>=3.9.2",
+    "numpy>=2.1.2",
+    "opencv-python>=4.10.0.84",
+    "openpyxl>=3.1.5",
+    "pandas>=2.2.3",
+    "pydicom>=3.0.1",
+    "pylibjpeg>=2.0.1",
+    "pylibjpeg-libjpeg>=2.3.0",
+    "pyyaml>=6.0.2",
+    "scikit-image>=0.24.0",
+    "scikit-learn>=1.5.2",
+    "seaborn>=0.13.2",
+    "torch>=2.5.0",
+    "torchmetrics>=1.5.2",
+    "torchvision>=0.20.0",
+    "tqdm>=4.66.5",
+    "xlrd>=2.0.1",
+]
+
+[dependency-groups]
+dev = [
+    "kaggle>=1.6.17",
+    "mypy>=1.13.0",
+    "ruff>=0.7.1",
+]
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "mypy>=1.13.0",
+    "ruff>=0.7.1",
 ]

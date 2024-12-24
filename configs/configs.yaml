@@ -1,0 +1,86 @@
+meta:
+  task_type: 'binary'
+  training_folder: './runs'
+  experiment_name: 'test_run'
+  checkpoint_dir: ''
+  seed: 42
+  kfolds: 2
+  metrics: 
+    types: ['accuracy', 'f1', 'auroc', 'precision', 'recall', 'confusion']
+    reduction: 'weighted'
+
+data:
+  datasets_path: '/media/shared/sda/loiola/datasets/processed'       
+  datasets: ['inbreast', 'bmcd', 'miniddsm']
+  sampler: 'weightened'
+  batch_size: 48
+  workers: 16
+  
+model:
+  name: 'resnet'
+  size: 50
+  pretrained: True
+
+training:
+  lr: 0.001
+  epochs: 30
+  loss: 'bce'
+  scheduler: 'plateau'
+  optimizer: 'adamw'
+  early_stopping:
+    enabled: False
+    patience: 5
+    min_delta: 0.001
+    metric: 'loss'
+
+optimizer:
+  weight_decay: 0.0
+  sgd:
+    momentum: 0.9
+    nesterov: False
+  adamw:
+    betas: [0.9, 0.999]
+    eps: 0.00000001
+    amsgrad: False
+  rmsprop:
+    momentum: 0.9
+    alpha: 0.99
+    eps: 0.00000001
+
+scheduler:
+  step: 
+    step_size: 10
+    gamma: 0.1
+  multistep:
+    name: multistep
+    milestones: [30, 60, 90]
+    gamma: 0.1
+  plateau:
+    patience: 5
+    factor: 0.1
+    min_lr: 0.000001
+    mode: 'min'
+    metric: 'loss'
+  cosine:
+    name: cosine
+    T_max: 100
+    eta_min: 0.0001
+  warmup_cosine:
+    T_0: 50
+    T_mult: 2
+    eta_min: 0.0001
+
+loss:
+  reduction: 'mean'
+  focal:
+    eps: 0.25
+    gamma: 2
+  cross_entropy:
+    weight: False
+
+augmentation:
+  height: 336
+  width: 224
+
+logging:
+  level: 'DEBUG'
