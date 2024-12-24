@@ -1,7 +1,7 @@
 meta:
   task_type: 'binary'
   training_folder: './runs'
-  experiment_name: 'both_datasets'
+  experiment_name: 'test_run'
   checkpoint_dir: ''
   seed: 42
   kfolds: 2
@@ -10,11 +10,11 @@ meta:
     reduction: 'weighted'
 
 data:
-  datasets_path: '/home/loiola/breast-density-classification/data'       
-  datasets: ['inbreast', 'bmcd']
+  datasets_path: '/media/shared/sda/loiola/datasets/processed'       
+  datasets: ['inbreast', 'bmcd', 'miniddsm']
   sampler: 'weightened'
-  batch_size: 12
-  workers: 8
+  batch_size: 48
+  workers: 16
   
 model:
   name: 'resnet'

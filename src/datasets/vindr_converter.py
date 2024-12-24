@@ -110,10 +110,10 @@ class VinDrConverter(BaseConverter):
             image_path = Path(image_path)
 
         df = pd.read_csv(csv_path)
-        df["target"] = df["density"].apply(
+        df["target"] = df["breast_density"].apply(
             lambda x: {"DENSITY A": 0, "DENSITY B": 1, "DENSITY C": 2, "DENSITY D": 3}[x]
         )
-        df["path"] = df.apply(lambda row: image_path / f"{row['patient_id']}@{row['image_id']}.png", axis=1)
+        df["path"] = df.apply(lambda row: image_path / f"{row['study_id']}@{row['image_id']}.png", axis=1)
         df["patient_id"] = df["study_id"]
         df = df[["path", "target", "patient_id"]]
         return df

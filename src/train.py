@@ -93,7 +93,7 @@ def main(args: dict) -> None:
     # -- check dataloader
     train_class = OneViewDataset(train_df, transform=transformations["train"])
     dataloader = get_dataloader(train_class, batch_size, sampler, workers=workers)
-    visualize_dataloader(dataloader, id_to_label, log_folder)
+    # visualize_dataloader(dataloader, id_to_label, log_folder)
 
     # -- load model
     factory = ModelFactory()
