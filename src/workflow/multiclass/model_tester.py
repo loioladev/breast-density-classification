@@ -33,7 +33,10 @@ class MultiClassModelTester(BaseModelTester):
         """
         # -- obtain logits from the models
         probabilities = []
+        # -- self.folder: Path
         for fold in os.listdir(self.folder):
+            if not (self.folder / fold).is_dir():
+                continue
             model_path = self.folder / Path(fold) / Path("best.pt")
             model_info = torch.load(model_path, weights_only=True)
             self.model.load_state_dict(model_info["model"])

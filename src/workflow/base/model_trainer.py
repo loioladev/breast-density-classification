@@ -188,8 +188,8 @@ class BaseModelTrainer(ABC):
 
         # -- iterate over the dataloader
         for inputs, labels in tqdm(dataloader, desc=f"{phase}"):
-            inputs = inputs.to(self.device)
-            labels = labels.to(self.device)
+            inputs = inputs.to(self.device).float()
+            labels = labels.to(self.device).long()
 
             # -- forward operation
             with torch.set_grad_enabled(phase == "train"):

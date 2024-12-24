@@ -11,6 +11,7 @@ from src.utils.dataloader import cross_validation, get_dataframe, get_dataloader
 from src.utils.logging import create_folder
 from src.utils.plotting import visualize_dataloader
 from src.workflow.binary.model_classifier import BinaryModelClassifier
+from src.workflow.multiclass.model_classifier import MultiClassClassifier
 from src.utils.logging import log_csv_information
 from pathlib import Path
 
@@ -92,7 +93,7 @@ def main(args: dict) -> None:
 
     # -- check dataloader
     train_class = OneViewDataset(train_df, transform=transformations["train"])
-    dataloader = get_dataloader(train_class, batch_size, sampler, workers=workers)
+    # dataloader = get_dataloader(train_class, batch_size, sampler, workers=workers)
     # visualize_dataloader(dataloader, id_to_label, log_folder)
 
     # -- load model
@@ -131,8 +132,13 @@ def main(args: dict) -> None:
         metric_args["average"] = metric_reduction
     metrics = ConfigManager.get_metrics(metric_types, metric_args)
 
-    # -- initialize binary classification
-    binary_classification = BinaryModelClassifier(
+    if task_type == "multiclass":
+        classifier_class = MultiClassClassifier
+    else:
+        classifier_class = BinaryModelClassifier
+
+    # -- initialize multiclass classification
+    classifier = classifier_class(
         log_folder,
         model,
         loss,
@@ -146,7 +152,7 @@ def main(args: dict) -> None:
     )
 
     # -- train models
-    binary_classification.train_models(train_df, kfolds, epochs, metrics)
+    classifier.train_models(train_df, kfolds, epochs, metrics)
 
     # -- test models
-    binary_classification.test_models(test_df)
+    classifier.test_models(test_df)

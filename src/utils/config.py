@@ -127,6 +127,8 @@ class ConfigManager:
             if metric not in metrics_fn:
                 logger.error(f"Metric {metric} not implemented")
                 sys.exit(1)
+            if metric == "confusion" and "average" in args:
+                del args["average"]
             metrics[metric] = metrics_fn[metric](**args)
         metrics = MetricCollection(metrics)
         return metrics

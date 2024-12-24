@@ -25,9 +25,17 @@ def get_transformations(res: tuple) -> dict[v2.Compose]:
                 v2.ToDtype(torch.float32, scale=True),
             ],
         ),
+        "test": v2.Compose(
+            [
+                v2.ToImage(),
+                v2.Resize(res),
+                v2.ToDtype(torch.float32, scale=True),
+            ],
+        )
     }
     target_transforms = {
         "train": lambda x: torch.tensor(x, dtype=torch.float32),
-        "val": lambda x: torch.tensor(x, dtype=torch.float32)
+        "val": lambda x: torch.tensor(x, dtype=torch.float32),
+        "test": lambda x: x
     }
     return transforms, target_transforms
