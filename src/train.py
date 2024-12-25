@@ -66,6 +66,7 @@ def main(args: dict) -> None:
     sampler = args["data"]["sampler"]
     batch_size = args["data"]["batch_size"]
     workers = args["data"]["workers"]
+    split_mode = args["data"]["split_mode"]
     # ----------------------------------------------------------------------- #
 
     # -- configure seed
@@ -85,7 +86,7 @@ def main(args: dict) -> None:
     transformations, target_transformations = get_transformations((height, width))
 
     # -- load datasets
-    train_df, test_df = get_dataframe(datasets, datasets_path, seed)
+    train_df, test_df = get_dataframe(datasets, datasets_path, seed, split_mode)
     train_df = cross_validation(train_df, seed, kfolds, id_to_label)
     log_csv_information(train_df, Path(log_folder) / "train_stats.txt")
     log_csv_information(test_df, Path(log_folder) / "test_stats.txt", is_test=True)
@@ -93,8 +94,8 @@ def main(args: dict) -> None:
 
     # -- check dataloader
     train_class = OneViewDataset(train_df, transform=transformations["train"])
-    # dataloader = get_dataloader(train_class, batch_size, sampler, workers=workers)
-    # visualize_dataloader(dataloader, id_to_label, log_folder)
+    dataloader = get_dataloader(train_class, batch_size, sampler, workers=workers)
+    visualize_dataloader(dataloader, id_to_label, log_folder)
 
     # -- load model
     factory = ModelFactory()
@@ -122,7 +123,7 @@ def main(args: dict) -> None:
     # -- load loss
     loss_config = args["loss"].get(loss_type, {})
     loss_weights = train_class.weights()
-    loss = ConfigManager.get_loss(loss_type, loss_weights, loss_config)
+    loss = ConfigManager.get_loss(loss_type, loss_weights, task_type, loss_config)
     logger.info(f"Loss {loss_type} loaded")
 
     # -- load metrics

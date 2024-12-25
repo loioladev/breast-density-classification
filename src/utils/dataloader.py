@@ -27,6 +27,25 @@ from src.datasets.oneview_dataset import OneViewDataset
 logger = logging.getLogger()
 
 
+def distribution_split_dataset(dataset: pd.DataFrame, mode: str) -> pd.DataFrame:
+    """
+    Split the dataset based on the distribution of the target.
+
+    :param dataset: The dataset to split
+    :param mode: The mode to split the dataset. Options are 'random', 'sequential' and 'balanced'
+    :return dataset: The dataset split
+    """
+    if mode == 'sequential':
+        dataset = dataset.sort_values(by=["target"])
+    elif mode == 'balanced':
+        dataset = dataset.groupby("target").apply(
+            lambda x: x.sample(n=dataset["target"].value_counts().min())
+        )
+    elif mode == 'random':
+        dataset = dataset.sample(frac=1)
+    return dataset
+
+
 def split_dataset(
     dataset: pd.DataFrame, split: float, seed: int
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -57,7 +76,7 @@ def split_dataset(
 
 
 def get_dataframe(
-    datasets: list[str], datasets_path: str, seed: int, split: float = 0.9
+    datasets: list[str], datasets_path: str, seed: int, split_mode: str = 'random', split: float = 0.9
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Return dataframe with items of each dataset selected.
@@ -67,6 +86,7 @@ def get_dataframe(
     must contain the names available for 'datasets', and each dataset must have
     a csv file named 'metadata.csv' and a folder with the images named 'images'
     :param seed: Value for reproducible results
+    :param split_mode: The mode to split the dataset. Options are 'random', 'sequential' and 'balanced'
     :param split: Quantity to maintain in training dataframe
     :return dataframe: A DataFrame object containing the targets and paths.
     """
@@ -103,7 +123,6 @@ def get_dataframe(
         total_df = pd.concat([total_df, dataset_df], ignore_index=True)
 
     # -- remove items not found
-    # -- TODO: investigate before reaching this step
     if not_found:
         logger.warning(f"Images not found: {len(not_found)}")
         logger.debug(f"Images not found: {not_found}")
@@ -113,7 +132,10 @@ def get_dataframe(
     total_df["target"] = total_df["target"].astype(int)
     total_df["path"] = total_df["path"].astype(str)
 
-    # -- split the dataset
+    # -- split dataset based on the data distribution defined
+    total_df = distribution_split_dataset(total_df, split_mode)
+
+    # -- split the dataset into training and testing
     train_df, test_df = split_dataset(total_df, split, seed)
 
     return train_df, test_df

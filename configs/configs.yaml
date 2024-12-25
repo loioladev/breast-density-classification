@@ -1,7 +1,7 @@
 meta:
-  task_type: 'binary'
+  task_type: 'multiclass'
   training_folder: './runs'
-  experiment_name: 'test_run'
+  experiment_name: 'resnet50_focal'
   checkpoint_dir: ''
   seed: 42
   kfolds: 2
@@ -10,11 +10,12 @@ meta:
     reduction: 'weighted'
 
 data:
-  datasets_path: '/media/shared/sda/loiola/datasets/processed'       
-  datasets: ['inbreast', 'bmcd', 'miniddsm']
-  sampler: 'weightened'
-  batch_size: 48
-  workers: 16
+  datasets_path: '/home/loioladev/git/breast-density-classification/data'       
+  datasets: ['inbreast']
+  split_mode: 'balanced'
+  sampler: 'weighted'
+  batch_size: 16
+  workers: 8
   
 model:
   name: 'resnet'
@@ -23,8 +24,8 @@ model:
 
 training:
   lr: 0.001
-  epochs: 30
-  loss: 'bce'
+  epochs: 15
+  loss: 'focal'
   scheduler: 'plateau'
   optimizer: 'adamw'
   early_stopping:

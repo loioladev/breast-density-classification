@@ -117,7 +117,7 @@ class BinaryModelClassifier(BaseModelClassifier):
 
             # -- load dataloader
             binary_class = OneViewDataset(
-                binary_df, self.transforms["val"], self.target_transforms["val"]
+                binary_df, self.transforms["val"], self.target_transforms["val"] #TODO: change to test
             )
             dataloader = get_dataloader(
                 binary_class, self.batch_size, workers=self.workers
