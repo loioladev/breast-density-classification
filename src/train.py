@@ -38,19 +38,18 @@ def main(args: dict) -> None:
     task_type = args["meta"]["task_type"]
     training_folder = args["meta"]["training_folder"]
     experiment_name = args["meta"]["experiment_name"]
-    checkpoint_dir = args["meta"]["checkpoint_dir"]
+    checkpoint_dir = args["meta"]["checkpoint_dir"] # TODO: implement checkpoint
     kfolds = args["meta"]["kfolds"]
     metric_types = args["meta"]["metrics"]["types"]
     metric_reduction = args["meta"]["metrics"]["reduction"]
 
     # -- MODEL
     model_name = args["model"]["name"]
-    model_size = args["model"]["size"]
     pretrained = args["model"]["pretrained"]
 
     # -- TRAINING
     epochs = args["training"]["epochs"]
-    lr = args["training"]["lr"]
+    lr = args["training"]["lr"] # TODO: implement learning rate 
     loss_type = args["training"]["loss"]
     schuduler_type = args["training"]["scheduler"]
     optimizer_type = args["training"]["optimizer"]
@@ -98,10 +97,9 @@ def main(args: dict) -> None:
     visualize_dataloader(dataloader, id_to_label, log_folder)
 
     # -- load model
-    factory = ModelFactory()
-    model = factory.get_model(model_name, task_type, pretrained, model_size=model_size)
+    model = ModelFactory.get_model(model_name, task_type, pretrained)
     model = model.to(device)
-    logger.info(f"Model {model_name}{model_size} loaded")
+    logger.info(f"Model {model_name} loaded")
     # TODO: load model from checkpoint
 
     # -- load optimizer
