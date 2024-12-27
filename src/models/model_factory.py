@@ -55,9 +55,9 @@ class ModelFactory:
             "resnet101": tmodels.ResNet101_Weights.DEFAULT,
             "densenet121": tmodels.DenseNet121_Weights.DEFAULT,
             "densenet169": tmodels.DenseNet169_Weights.DEFAULT,
-            "efficientnet_b0": tmodels.EfficientNetB0_Weights.DEFAULT,
-            "efficientnet_b1": tmodels.EfficientNetB1_Weights.DEFAULT,
-            "efficientnet_b2": tmodels.EfficientNetB2_Weights.DEFAULT,
+            "efficientnet_b0": tmodels.EfficientNet_B0_Weights.DEFAULT,
+            "efficientnet_b1": tmodels.EfficientNet_B1_Weights.DEFAULT,
+            "efficientnet_b2": tmodels.EfficientNet_B2_Weights.DEFAULT,
 
         }
         # -- get model function from torchvision
