@@ -10,7 +10,7 @@ from sklearn.metrics import classification_report, confusion_matrix
 from src.datasets.oneview_dataset import OneViewDataset
 from src.utils.dataloader import get_dataloader
 from src.utils.logging import convert_time
-from src.utils.plotting import plot_confusion_matrix
+from src.utils.plotting import plot_confusion_matrix, plot_metrics
 from src.workflow.base.model_classifier import BaseModelClassifier
 from src.workflow.multiclass.model_trainer import MulticlassModelTrainer
 from src.workflow.multiclass.model_tester import MultiClassModelTester
@@ -70,6 +70,11 @@ class MultiClassClassifier(BaseModelClassifier):
             self.optimizer.load_state_dict(optimizer_start)
             if self.scheduler:
                 self.scheduler.load_state_dict(scheduler_start)
+
+            train_metrics = pd.read_csv(folder_path / "train_metrics.csv", sep=';')
+            plot_metrics(train_metrics, folder_path / "train_metrics.png")
+            val_metrics = pd.read_csv(folder_path / "val_metrics.csv", sep=';')
+            plot_metrics(val_metrics, folder_path / "val_metrics.png")
 
             logger.info(
                 f"Folder {fold} trained in {convert_time(time.time() - since_fold)}"

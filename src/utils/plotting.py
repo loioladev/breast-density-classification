@@ -3,7 +3,7 @@ import math
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import numpy as np
+import pandas as pd
 import seaborn as sns
 from torch.utils.data import DataLoader
 
@@ -74,3 +74,31 @@ def plot_roc_curve(roc_data, auroc):
     plt.title("Receiver Operating Characteristic (ROC) Curve")
     plt.legend(loc="lower right")
     plt.show()
+
+
+def plot_metrics(metrics_df: pd.DataFrame, output_path: Path) -> None:
+    """
+    Plot the metrics obtained from the resulting csv in a line plot
+
+    :param metrics_df: The metrics dataframe
+    :param output_path: The output path to save the plot
+    """
+    metrics = ["accuracy", "auroc", "f1", "precision", "recall"]
+    
+    # -- create subplot grid with enough space for all metrics
+    fig, ax = plt.subplots(1, len(metrics), figsize=(4 * len(metrics), 5))
+    
+    # -- plot each metric
+    for idx, metric in enumerate(metrics):
+        sns.lineplot(data=metrics_df, x="epoch", y=metric, ax=ax[idx])
+        ax[idx].set_title(metric.upper())
+        ax[idx].set_xlabel("Epoch")
+        ax[idx].set_ylabel(metric.capitalize())
+        ax[idx].set_ylim(0.0, 1.0)
+        
+    # -- adjust layout to prevent overlap
+    plt.tight_layout()
+    
+    # -- save and close
+    plt.savefig(output_path)
+    plt.close()
