@@ -38,6 +38,8 @@ def distribution_split_dataset(dataset: pd.DataFrame, mode: str) -> pd.DataFrame
     if mode == 'sequential':
         dataset = dataset.sort_values(by=["target"])
     elif mode == 'balanced':
+        # -- get the minimum number of samples in the dataset according to the target and maintain a fair distrubition on column 'dataset'
+        # TODO: improve
         dataset = dataset.groupby("target").apply(
             lambda x: x.sample(n=dataset["target"].value_counts().min())
         )

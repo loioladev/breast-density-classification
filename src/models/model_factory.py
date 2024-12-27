@@ -12,16 +12,20 @@ class ModelFactory:
         :param num_classes: The number of classes for the model
         :return model: The model instance with the last layer modified
         """
+        layer = None
         if hasattr(model, "fc"):
             in_features = model.fc.in_features
             model.fc = nn.Linear(in_features, num_classes)
+            layer = "fc"
         elif hasattr(model, "classifier"):
             if isinstance(model.classifier, nn.Linear):
                 in_features = model.classifier.in_features
                 model.classifier = nn.Linear(in_features, num_classes)
+                layer = "classifier"
             elif isinstance(model.classifier, nn.Sequential):
                 in_features = model.classifier[-1].in_features
                 model.classifier[-1] = nn.Linear(in_features, num_classes)
+                layer = "classifier seq"
         return model
 
     @classmethod
@@ -42,11 +46,18 @@ class ModelFactory:
             raise ValueError(f"Model {model_name} not found in torchvision models")
         
         weights = {
+            "convnext_tiny": tmodels.ConvNeXt_Tiny_Weights.DEFAULT,
             "convnext_small": tmodels.ConvNeXt_Small_Weights.DEFAULT,
             "convnext_base": tmodels.ConvNeXt_Base_Weights.DEFAULT,
+            "resnet18": tmodels.ResNet18_Weights.DEFAULT,
             "resnet34": tmodels.ResNet34_Weights.DEFAULT,
             "resnet50": tmodels.ResNet50_Weights.DEFAULT,
             "resnet101": tmodels.ResNet101_Weights.DEFAULT,
+            "densenet121": tmodels.DenseNet121_Weights.DEFAULT,
+            "densenet169": tmodels.DenseNet169_Weights.DEFAULT,
+            "efficientnet_b0": tmodels.EfficientNetB0_Weights.DEFAULT,
+            "efficientnet_b1": tmodels.EfficientNetB1_Weights.DEFAULT,
+            "efficientnet_b2": tmodels.EfficientNetB2_Weights.DEFAULT,
 
         }
         # -- get model function from torchvision

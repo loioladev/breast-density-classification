@@ -18,7 +18,7 @@ data:
   workers: 8
   
 model:
-  name: 'convnext_small'
+  name: 'resnet18'
   pretrained: True
 
 training:

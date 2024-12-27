@@ -95,9 +95,7 @@ class ConfigManager:
             logger.error(f"Loss {loss} not implemented")
             sys.exit(1)
 
-        if loss == "ce" and not args["weight"]:
-            del args["weight"]
-        elif loss == "ce" and task == "binary":
+        if loss == "ce" and task == "binary":
             loss = "bce"
         elif loss == "focal":
             args["reduction"] = "mean"

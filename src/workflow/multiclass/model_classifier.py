@@ -115,6 +115,8 @@ class MultiClassClassifier(BaseModelClassifier):
             zero_division=0,
         )
         logger.info(report)
+        with open(self.run_folder / "test_metrics.txt", "w") as f:
+            f.write(report)
 
         # -- calculate confusion matrix
         cm = confusion_matrix(ground_truth, predictions)
