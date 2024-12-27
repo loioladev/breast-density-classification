@@ -27,25 +27,67 @@ from src.datasets.oneview_dataset import OneViewDataset
 logger = logging.getLogger()
 
 
-def distribution_split_dataset(dataset: pd.DataFrame, mode: str) -> pd.DataFrame:
+def distribution_split_dataset(dataset: pd.DataFrame, mode: str, seed: int) -> pd.DataFrame:
     """
     Split the dataset based on the distribution of the target.
 
     :param dataset: The dataset to split
     :param mode: The mode to split the dataset. Options are 'random', 'sequential' and 'balanced'
+    :param seed: The seed for reproducibility
     :return dataset: The dataset split
     """
     if mode == 'sequential':
-        dataset = dataset.sort_values(by=["target"])
-    elif mode == 'balanced':
-        # -- get the minimum number of samples in the dataset according to the target and maintain a fair distrubition on column 'dataset'
-        # TODO: improve
-        dataset = dataset.groupby("target").apply(
-            lambda x: x.sample(n=dataset["target"].value_counts().min())
-        )
+        return dataset.sort_values(by=["target", "dataset"])
     elif mode == 'random':
-        dataset = dataset.sample(frac=1)
-    return dataset
+        return dataset.sample(frac=1, random_state=seed)
+    
+    # -- balanced mode
+    df = dataset.copy()
+    target_column = "target"
+    dataset_column = "dataset"
+    target_counts = df[target_column].value_counts()
+    min_target_count = target_counts.min()
+    
+    balanced_samples = []
+
+    # -- process each target value
+    for target_value in target_counts.index:
+        target_subset = df[df[target_column] == target_value]
+        
+        # -- calculate dataset proportions for current target
+        dataset_proportions = (target_subset[dataset_column].value_counts() / 
+                             len(target_subset))
+        
+        # -- calculate number of samples needed from each dataset
+        samples_per_dataset = (dataset_proportions * min_target_count).round().astype(int)
+        
+        # -- adjust samples to exactly match min_target_count
+        while samples_per_dataset.sum() != min_target_count:
+            if samples_per_dataset.sum() < min_target_count:
+                # -- add one to largest proportion
+                idx = dataset_proportions.idxmax()
+                samples_per_dataset[idx] += 1
+            else:
+                # -- subtract one from smallest non-zero value
+                non_zero_idx = samples_per_dataset[samples_per_dataset > 0].idxmin()
+                samples_per_dataset[non_zero_idx] -= 1
+        
+        # -- sample from each dataset according to calculated proportions
+        target_balanced = pd.DataFrame()
+        for dataset, n_samples in samples_per_dataset.items():
+            if n_samples > 0:
+                dataset_subset = target_subset[target_subset[dataset_column] == dataset]
+                sampled = dataset_subset.sample(n=n_samples, random_state=42)
+                target_balanced = pd.concat([target_balanced, sampled])
+        
+        balanced_samples.append(target_balanced)
+    
+    # -- combine all balanced samples
+    final_df = pd.concat(balanced_samples, axis=0)
+    
+    return final_df
+
+
 
 
 def split_dataset(
@@ -135,7 +177,7 @@ def get_dataframe(
     total_df["path"] = total_df["path"].astype(str)
 
     # -- split dataset based on the data distribution defined
-    total_df = distribution_split_dataset(total_df, split_mode)
+    total_df = distribution_split_dataset(total_df, split_mode, seed)
 
     # -- split the dataset into training and testing
     train_df, test_df = split_dataset(total_df, split, seed)
