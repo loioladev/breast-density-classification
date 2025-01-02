@@ -218,6 +218,7 @@ def get_dataloader(
         shuffle=shuffle,
         sampler=sampler,
         num_workers=workers,
+        pin_memory=True,
         # drop_last=True,  # -- drop last batch if it is not complete
     )
     return dataloader
