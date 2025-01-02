@@ -159,6 +159,8 @@ class BaseModelTrainer(ABC):
                 best_epoch = epoch
                 self.save_epoch(self.log_path, True, val_loss, epoch)
                 logger.info(f"Model improved with loss {val_loss:.4f}")
+            else:
+                early_stop += 1
 
             # -- save the last epoch state
             self.save_epoch(self.log_path, False, val_loss, epoch)
@@ -173,8 +175,7 @@ class BaseModelTrainer(ABC):
             train_metrics.reset()
             val_metrics.reset()
 
-            # -- update early stopping counter
-            early_stop += 1
+            # -- check for early stopping
             if early_stop >= self.early_stopping:
                 logger.info("Early stopping activated")
                 break
