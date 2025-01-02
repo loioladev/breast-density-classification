@@ -59,7 +59,7 @@ class BaseModelTrainer(ABC):
             "epoch": epoch,
             "model": self.model.state_dict(),
             "optimizer": self.optimizer.state_dict(),
-            "scheduler": self.scheduler.state_dict(),
+            "scheduler": self.scheduler.state_dict() if self.scheduler else None,
         }
         save_type = "best" if is_best else "last"
         save_path = path / f"{save_type}.pt"
