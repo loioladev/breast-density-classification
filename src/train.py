@@ -66,6 +66,7 @@ def main(args: dict) -> None:
     batch_size = args["data"]["batch_size"]
     workers = args["data"]["workers"]
     split_mode = args["data"]["split_mode"]
+    train_split = args["data"]["train_split"]
     # ----------------------------------------------------------------------- #
 
     # -- configure seed
@@ -85,7 +86,7 @@ def main(args: dict) -> None:
     transformations, target_transformations = get_transformations((height, width))
 
     # -- load datasets
-    train_df, test_df = get_dataframe(datasets, datasets_path, seed, split_mode)
+    train_df, test_df = get_dataframe(datasets, datasets_path, seed, split_mode, train_split)
     train_df = cross_validation(train_df, seed, kfolds, id_to_label)
     log_csv_information(train_df, Path(log_folder) / "train_stats.txt")
     log_csv_information(test_df, Path(log_folder) / "test_stats.txt", is_test=True)

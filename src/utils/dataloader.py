@@ -177,10 +177,13 @@ def get_dataframe(
     total_df["path"] = total_df["path"].astype(str)
 
     # -- split dataset based on the data distribution defined
-    total_df = distribution_split_dataset(total_df, split_mode, seed)
+    distribution_df = distribution_split_dataset(total_df, split_mode, seed)
 
     # -- split the dataset into training and testing
-    train_df, test_df = split_dataset(total_df, split, seed)
+    train_df, test_df = split_dataset(distribution_df, split, seed)
+
+    # -- add items of total_df that are not in distribution_df to the test_df
+    test_df = pd.concat([test_df, total_df[~total_df.index.isin(distribution_df.index)]], ignore_index=True)
 
     return train_df, test_df
 
