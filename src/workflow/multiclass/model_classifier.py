@@ -60,6 +60,7 @@ class MultiClassClassifier(BaseModelClassifier):
                 self.criterion,
                 self.optimizer,
                 self.scheduler,
+                self.early_stopping,
                 csv_logger,
                 folder_path,
             )

@@ -54,8 +54,6 @@ class BinaryModelClassifier(BaseModelClassifier):
                 lambda x: 1 if x == target else 0
             )
 
-            # -- TODO: print distribution of target
-
             # -- store pretrained states in order to reset models after each fold
             model_start = self.model.state_dict()
             optimizer_start = self.optimizer.state_dict()
@@ -78,6 +76,7 @@ class BinaryModelClassifier(BaseModelClassifier):
                     self.criterion,
                     self.optimizer,
                     self.scheduler,
+                    self.early_stopping,
                     csv_logger,
                     folder_path,
                 )

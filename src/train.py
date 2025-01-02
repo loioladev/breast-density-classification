@@ -53,7 +53,7 @@ def main(args: dict) -> None:
     loss_type = args["training"]["loss"]
     schuduler_type = args["training"]["scheduler"]
     optimizer_type = args["training"]["optimizer"]
-    # TODO: early stopping
+    early_stopping = args["training"]["early_stopping"]
 
     # -- AUGMENTATION
     height = args["augmentation"]["height"]
@@ -149,6 +149,7 @@ def main(args: dict) -> None:
         batch_size,
         workers,
         sampler,
+        early_stopping,
     )
 
     # -- train models
