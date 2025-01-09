@@ -49,6 +49,7 @@ class ModelFactory:
             "convnext_tiny": tmodels.ConvNeXt_Tiny_Weights.DEFAULT,
             "convnext_small": tmodels.ConvNeXt_Small_Weights.DEFAULT,
             "convnext_base": tmodels.ConvNeXt_Base_Weights.DEFAULT,
+            "convnext_large": tmodels.ConvNeXt_Large_Weights.DEFAULT,
             "resnet18": tmodels.ResNet18_Weights.DEFAULT,
             "resnet34": tmodels.ResNet34_Weights.DEFAULT,
             "resnet50": tmodels.ResNet50_Weights.DEFAULT,
