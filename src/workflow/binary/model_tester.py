@@ -70,6 +70,19 @@ class BinaryModelTester(BaseModelTester):
         for fold in os.listdir(self.folder):
             model_path = self.folder / Path(fold) / Path("best.pt")
             model_info = torch.load(model_path, weights_only=True)
+            
+            # -- some models may have a different key before the model, 
+            #    so we need to remove it with the following code
+            # from collections import OrderedDict
+            # new_state_dict = OrderedDict()
+            # for k, v in model_info['model'].items():
+            #     # -- the key will be one of these two options
+            #     name = k.replace('module.', '')  
+            #     name = k[2:]
+            #     new_state_dict[name] = v
+            # self.model.load_state_dict(new_state_dict)
+            # # -- remove the line below and uncomment the code above
+
             self.model.load_state_dict(model_info["model"])
             probabilities.append(self.evaluate())
 

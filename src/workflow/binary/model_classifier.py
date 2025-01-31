@@ -165,22 +165,18 @@ class BinaryModelClassifier(BaseModelClassifier):
         # -- initialize variable
         n_samples = len(dataframe)
         n_classes = len(values)
-        best_predictions = np.full(n_samples, -1, dtype=int)
+        best_predictions = np.full(n_samples, 0, dtype=int)
+
 
         for i in range(n_samples):
             # -- extract predictions and thresholds for this sample
-            sample_predictions = np.array([values[j][0][i] for j in range(n_classes)])
-            sample_thresholds = np.array([values[j][1] for j in range(n_classes)])
+            sample_predictions = [values[j][0][i] for j in range(n_classes)]
+            sample_thresholds = [values[j][1] for j in range(n_classes)]
 
             # -- find indices where prediction meets or exceeds threshold
-            valid_indices = np.where(sample_predictions >= sample_thresholds)[0]
+            thresholds_found = [sample_predictions[i] - sample_thresholds[i] for i in range(n_classes)]
 
-            if len(valid_indices) > 0:
-                # -- if any predictions meet threshold, take the last (highest index)
-                best_predictions[i] = valid_indices[-1]
-            else:
-                # -- if no predictions meet threshold, find the closest to threshold
-                threshold_distances = sample_thresholds - sample_predictions
-                best_predictions[i] = np.argmin(threshold_distances)
+            best_predictions[i] = np.argmax(thresholds_found)
+         
 
         return best_predictions
