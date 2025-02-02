@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torchvision.models as tmodels
 
+
 class ModelFactory:
     """Factory class for model builders"""
     @staticmethod
@@ -71,8 +72,8 @@ class ModelFactory:
         # -- modify last layer to match number of classes
         num_classes = 1 if task_type == "binary" else 4
         model = cls._modify_last_layer(model, num_classes)
-
+        
         # -- allow model to be trained on multiple GPUs
-        model = nn.DataParallel(model)
+        # model = nn.DataParallel(model)
 
         return model

@@ -1,37 +1,34 @@
 meta:
   task_type: 'multiclass'
   training_folder: './runs'
-  experiment_name: 'convnext_focal'
+  experiment_name: 'model'
   checkpoint_dir: ''
   seed: 42
-  kfolds: 2
+  kfolds: 4
   metrics: 
     types: ['accuracy', 'f1', 'auroc', 'precision', 'recall', 'confusion']
     reduction: 'weighted'
 
 data:
-  datasets_path: '/home/loioladev/git/breast-density-classification/data'       
-  datasets: ['inbreast']
-  split_mode: 'random'
+  datasets_path: '/media/shared/sda/loiola/datasets/processed'       
+  datasets: ['inbreast', 'rsna', 'vindr', 'bmcd', 'miniddsm']
+  split_mode: 'balanced'
   sampler: 'weighted'
-  batch_size: 16
-  workers: 8
+  train_split: 0.2
+  batch_size: 32
+  workers: 32
   
 model:
-  name: 'resnet18'
+  name: 'convnext_tiny'
   pretrained: True
 
 training:
   lr: 0.001
-  epochs: 15
-  loss: 'focal'
-  scheduler: 'plateau'
-  optimizer: 'adamw'
-  early_stopping:
-    enabled: False
-    patience: 5
-    min_delta: 0.001
-    metric: 'loss'
+  epochs: 50
+  loss: 'ce'
+  scheduler: ''
+  optimizer: 'sgd'
+  early_stopping: 25
 
 optimizer:
   weight_decay: 0.0

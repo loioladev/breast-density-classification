@@ -98,9 +98,10 @@ class ConfigManager:
         if loss == "ce" and task == "binary":
             loss = "bce"
         elif loss == "focal":
-            args["reduction"] = "mean"
-            args["weights"] = torch.tensor(weights).to(set_device())
-            args["task"] = task
+            # args["reduction"] = "mean"
+            # args["weights"] = torch.tensor(weights).to(set_device())
+            # args["task"] = task
+            pass
 
         loss = losses[loss](**args)
         return loss
@@ -160,5 +161,5 @@ def set_device() -> torch.device:
     if not torch.cuda.is_available():
         device = torch.device("cpu")
     else:
-        device = torch.device("cuda")
+        device = torch.device("cuda:0")
     return device

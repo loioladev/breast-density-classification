@@ -150,7 +150,7 @@ class BaseModelTrainer(ABC):
 
             # -- update the learning rate
             if self.scheduler:
-                self.scheduler.step(val_loss)
+                self.scheduler.step()
 
             # -- save the best epoch state
             if val_loss < best_loss:
@@ -197,11 +197,11 @@ class BaseModelTrainer(ABC):
         running_loss = 0.0
         self.model.train() if phase == "train" else self.model.eval()
         metrics.train() if phase == "train" else metrics.eval()
-
         # -- iterate over the dataloader
         for inputs, labels in tqdm(dataloader, desc=f"{phase}"):
-            inputs = inputs.to(self.device).float()
-            labels = labels.to(self.device).long()
+            inputs = inputs.to(self.device)
+            labels = labels.type(torch.LongTensor)
+            labels = labels.to(self.device)
 
             # -- forward operation
             with torch.set_grad_enabled(phase == "train"):

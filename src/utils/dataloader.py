@@ -4,7 +4,7 @@ dataloader of the selected datasets to use
 """
 
 import logging
-import sys
+import os
 from pathlib import Path
 
 import numpy as np
@@ -192,7 +192,7 @@ def get_dataloader(
     dataset: OneViewDataset,
     batch_size: int,
     sampler_cfg: str = "",
-    workers: int = 0,
+    workers: int = int(os.cpu_count() * 0.8),
     shuffle: bool = False,
 ) -> DataLoader:
     """
@@ -221,6 +221,7 @@ def get_dataloader(
         shuffle=shuffle,
         sampler=sampler,
         num_workers=workers,
+        persistent_workers=True,
         pin_memory=True,
         # drop_last=True,  # -- drop last batch if it is not complete
     )

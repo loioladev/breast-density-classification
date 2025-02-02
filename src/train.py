@@ -113,7 +113,8 @@ def main(args: dict) -> None:
     scheduler = None
     if schuduler_type:
         scheduler_config = args["scheduler"].get(schuduler_type, {})
-        del scheduler_config["metric"]
+        if "metric" in scheduler_config:
+            del scheduler_config["metric"]
         scheduler = ConfigManager.get_scheduler(
             optimizer, schuduler_type, scheduler_config
         )

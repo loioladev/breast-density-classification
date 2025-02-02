@@ -39,6 +39,8 @@ class OneViewDataset(Dataset):
             image = pixel_array(image_path)
         else:
             image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+        
+        # image = cv2.applyColorMap(image, cv2.COLORMAP_MAGMA)
 
         # -- get label
         label = row["target"]

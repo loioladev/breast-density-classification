@@ -5,7 +5,7 @@ from torch import Tensor
 from typing import Union
 
 
-class FocalLoss(nn.Module):
+class FocalLossAdvanced(nn.Module):
     """Computes the focal loss between input and target
     as described here https://arxiv.org/abs/1708.02002v2
 
@@ -107,3 +107,16 @@ class FocalLoss(nn.Module):
             return x.sum()
         else:
             return x
+
+class FocalLoss(nn.Module):
+    def __init__(self, alpha=1, gamma=2):
+        super(FocalLoss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+        self.ce_loss = nn.CrossEntropyLoss(reduction='none')
+
+    def forward(self, predictions, targets):
+        ce_loss = self.ce_loss(predictions, targets)
+        p_t = torch.exp(-ce_loss)
+        focal_loss = self.alpha * ((1 - p_t) ** self.gamma) * ce_loss
+        return focal_loss.mean()
