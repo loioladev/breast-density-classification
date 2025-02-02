@@ -78,7 +78,7 @@ def convert(dataset: str, path: str, output: str, processes: int) -> None:
     :param processes: Number of processes to use
     """
     logging.basicConfig(
-        format=LOGGER_FORMAT, datefmt="%Y-%m-%d %H:%M:%S", level=logging.DEBUG
+        format=LOGGER_FORMAT, datefmt="%Y-%m-%d %H:%M:%S", level=logging.DEBUG,
     )
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)

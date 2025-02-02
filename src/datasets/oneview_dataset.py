@@ -39,7 +39,8 @@ class OneViewDataset(Dataset):
             image = pixel_array(image_path)
         else:
             image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-        image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        
+        # image = cv2.applyColorMap(image, cv2.COLORMAP_MAGMA)
 
         # -- get label
         label = row["target"]
@@ -59,5 +60,5 @@ class OneViewDataset(Dataset):
         :return weights: The weights of each image
         """
         values = self.csv["target"].value_counts()
-        weights = [1 / values[i] for i in self.csv["target"].values]
+        weights = [1/values[i] for i in range(len(values))]
         return weights

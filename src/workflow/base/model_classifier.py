@@ -25,6 +25,7 @@ class BaseModelClassifier(ABC):
         batch_size,
         workers,
         sampler,
+        early_stopping,
     ) -> None:
         self.run_folder = Path(folder)
         self.model = model
@@ -36,6 +37,7 @@ class BaseModelClassifier(ABC):
         self.batch_size = batch_size
         self.workers = workers
         self.sampler = sampler
+        self.early_stopping = early_stopping
         self.device = set_device()
 
     def load_data(self, dataframe: pd.DataFrame, fold: int) -> dict:

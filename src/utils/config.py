@@ -10,9 +10,7 @@ import sys
 import numpy
 import torch
 import torch.nn as nn
-from focal_loss.focal_loss import (
-    FocalLoss,  # https://github.com/mathiaszinnen/focal_loss_torch
-)
+from src.utils.losses import FocalLoss
 from torch.optim import Optimizer, lr_scheduler
 from torchmetrics import (
     AUROC,
@@ -77,12 +75,13 @@ class ConfigManager:
         return scheduler
 
     @staticmethod
-    def get_loss(loss: str, weights: list, args: dict) -> nn.Module:
+    def get_loss(loss: str, weights: list, task: str, args: dict) -> nn.Module:
         """
         Get loss function instance
 
         :param loss: The loss function name
         :param weights: The weights for the loss function
+        :param task_type: The task type, either "binary" or "multiclass"
         :param args: The arguments for the loss function
         :return loss: The loss function instance
         """
@@ -96,11 +95,13 @@ class ConfigManager:
             logger.error(f"Loss {loss} not implemented")
             sys.exit(1)
 
-        if loss == "cross_entropy" and not args["weight"]:
-            del args["weight"]
-        # TODO: review this line, improving it
-        if loss == "focal":
-            args["weights"] = torch.tensor(weights).to(set_device())
+        if loss == "ce" and task == "binary":
+            loss = "bce"
+        elif loss == "focal":
+            # args["reduction"] = "mean"
+            # args["weights"] = torch.tensor(weights).to(set_device())
+            # args["task"] = task
+            pass
 
         loss = losses[loss](**args)
         return loss
@@ -127,6 +128,8 @@ class ConfigManager:
             if metric not in metrics_fn:
                 logger.error(f"Metric {metric} not implemented")
                 sys.exit(1)
+            if metric == "confusion" and "average" in args:
+                del args["average"]
             metrics[metric] = metrics_fn[metric](**args)
         metrics = MetricCollection(metrics)
         return metrics
@@ -158,5 +161,5 @@ def set_device() -> torch.device:
     if not torch.cuda.is_available():
         device = torch.device("cpu")
     else:
-        device = torch.device("cuda")
+        device = torch.device("cuda:0")
     return device

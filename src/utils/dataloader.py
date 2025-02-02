@@ -4,7 +4,7 @@ dataloader of the selected datasets to use
 """
 
 import logging
-import sys
+import os
 from pathlib import Path
 
 import numpy as np
@@ -25,6 +25,69 @@ from src.datasets.vindr_converter import VinDrConverter
 from src.datasets.oneview_dataset import OneViewDataset
 
 logger = logging.getLogger()
+
+
+def distribution_split_dataset(dataset: pd.DataFrame, mode: str, seed: int) -> pd.DataFrame:
+    """
+    Split the dataset based on the distribution of the target.
+
+    :param dataset: The dataset to split
+    :param mode: The mode to split the dataset. Options are 'random', 'sequential' and 'balanced'
+    :param seed: The seed for reproducibility
+    :return dataset: The dataset split
+    """
+    if mode == 'sequential':
+        return dataset.sort_values(by=["target", "dataset"])
+    elif mode == 'random':
+        return dataset.sample(frac=1, random_state=seed)
+    
+    # -- balanced mode
+    df = dataset.copy()
+    target_column = "target"
+    dataset_column = "dataset"
+    target_counts = df[target_column].value_counts()
+    min_target_count = target_counts.min()
+    
+    balanced_samples = []
+
+    # -- process each target value
+    for target_value in target_counts.index:
+        target_subset = df[df[target_column] == target_value]
+        
+        # -- calculate dataset proportions for current target
+        dataset_proportions = (target_subset[dataset_column].value_counts() / 
+                             len(target_subset))
+        
+        # -- calculate number of samples needed from each dataset
+        samples_per_dataset = (dataset_proportions * min_target_count).round().astype(int)
+        
+        # -- adjust samples to exactly match min_target_count
+        while samples_per_dataset.sum() != min_target_count:
+            if samples_per_dataset.sum() < min_target_count:
+                # -- add one to largest proportion
+                idx = dataset_proportions.idxmax()
+                samples_per_dataset[idx] += 1
+            else:
+                # -- subtract one from smallest non-zero value
+                non_zero_idx = samples_per_dataset[samples_per_dataset > 0].idxmin()
+                samples_per_dataset[non_zero_idx] -= 1
+        
+        # -- sample from each dataset according to calculated proportions
+        target_balanced = pd.DataFrame()
+        for dataset, n_samples in samples_per_dataset.items():
+            if n_samples > 0:
+                dataset_subset = target_subset[target_subset[dataset_column] == dataset]
+                sampled = dataset_subset.sample(n=n_samples, random_state=42)
+                target_balanced = pd.concat([target_balanced, sampled])
+        
+        balanced_samples.append(target_balanced)
+    
+    # -- combine all balanced samples
+    final_df = pd.concat(balanced_samples, axis=0)
+    
+    return final_df
+
+
 
 
 def split_dataset(
@@ -57,7 +120,7 @@ def split_dataset(
 
 
 def get_dataframe(
-    datasets: list[str], datasets_path: str, seed: int, split: float = 0.9
+    datasets: list[str], datasets_path: str, seed: int, split_mode: str = 'random', split: float = 0.9
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Return dataframe with items of each dataset selected.
@@ -67,6 +130,7 @@ def get_dataframe(
     must contain the names available for 'datasets', and each dataset must have
     a csv file named 'metadata.csv' and a folder with the images named 'images'
     :param seed: Value for reproducible results
+    :param split_mode: The mode to split the dataset. Options are 'random', 'sequential' and 'balanced'
     :param split: Quantity to maintain in training dataframe
     :return dataframe: A DataFrame object containing the targets and paths.
     """
@@ -103,7 +167,6 @@ def get_dataframe(
         total_df = pd.concat([total_df, dataset_df], ignore_index=True)
 
     # -- remove items not found
-    # -- TODO: investigate before reaching this step
     if not_found:
         logger.warning(f"Images not found: {len(not_found)}")
         logger.debug(f"Images not found: {not_found}")
@@ -113,8 +176,14 @@ def get_dataframe(
     total_df["target"] = total_df["target"].astype(int)
     total_df["path"] = total_df["path"].astype(str)
 
-    # -- split the dataset
-    train_df, test_df = split_dataset(total_df, split, seed)
+    # -- split dataset based on the data distribution defined
+    distribution_df = distribution_split_dataset(total_df, split_mode, seed)
+
+    # -- split the dataset into training and testing
+    train_df, test_df = split_dataset(distribution_df, split, seed)
+
+    # -- add items of total_df that are not in distribution_df to the test_df
+    test_df = pd.concat([test_df, total_df[~total_df.index.isin(distribution_df.index)]], ignore_index=True)
 
     return train_df, test_df
 
@@ -123,7 +192,7 @@ def get_dataloader(
     dataset: OneViewDataset,
     batch_size: int,
     sampler_cfg: str = "",
-    workers: int = 0,
+    workers: int = int(os.cpu_count() * 0.8),
     shuffle: bool = False,
 ) -> DataLoader:
     """
@@ -152,6 +221,8 @@ def get_dataloader(
         shuffle=shuffle,
         sampler=sampler,
         num_workers=workers,
+        persistent_workers=True,
+        pin_memory=True,
         # drop_last=True,  # -- drop last batch if it is not complete
     )
     return dataloader

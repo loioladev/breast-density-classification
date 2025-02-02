@@ -1,6 +1,6 @@
 import torch
 
-from workflow.base.model_trainer import BaseModelTrainer
+from src.workflow.base.model_trainer import BaseModelTrainer
 
 
 class MulticlassModelTrainer(BaseModelTrainer):

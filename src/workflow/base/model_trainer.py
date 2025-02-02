@@ -24,6 +24,7 @@ class BaseModelTrainer(ABC):
         criterion: nn.Module,
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler._LRScheduler,
+        early_stopping: int,
         csv_logger: CSVLogger,
         save_path: str | Path,
     ) -> None:
@@ -40,6 +41,7 @@ class BaseModelTrainer(ABC):
         self.device = set_device()
         self.model = model.to(self.device)
         self.criterion = criterion.to(self.device)
+        self.early_stopping = early_stopping
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.csv_logger = csv_logger
@@ -59,7 +61,7 @@ class BaseModelTrainer(ABC):
             "epoch": epoch,
             "model": self.model.state_dict(),
             "optimizer": self.optimizer.state_dict(),
-            "scheduler": self.scheduler.state_dict(),
+            "scheduler": self.scheduler.state_dict() if self.scheduler else None,
         }
         save_type = "best" if is_best else "last"
         save_path = path / f"{save_type}.pt"
@@ -109,6 +111,7 @@ class BaseModelTrainer(ABC):
         # -- initialize metrics
         train_metrics = metric_collection.clone(prefix="train_").to(self.device)
         val_metrics = metric_collection.clone(prefix="val_").to(self.device)
+        early_stop = 0
 
         # -- iterate over the epochs
         for epoch in range(epochs):
@@ -147,17 +150,21 @@ class BaseModelTrainer(ABC):
 
             # -- update the learning rate
             if self.scheduler:
-                self.scheduler.step(val_loss)
+                self.scheduler.step()
 
             # -- save the best epoch state
             if val_loss < best_loss:
+                early_stop = 0
                 best_loss = val_loss
                 best_epoch = epoch
                 self.save_epoch(self.log_path, True, val_loss, epoch)
                 logger.info(f"Model improved with loss {val_loss:.4f}")
+            else:
+                early_stop += 1
 
             # -- save the last epoch state
             self.save_epoch(self.log_path, False, val_loss, epoch)
+
 
             # -- log the results to the console
             logger.info(
@@ -167,6 +174,11 @@ class BaseModelTrainer(ABC):
             logger.info(f"Validation loss: {val_loss:.4f}")
             train_metrics.reset()
             val_metrics.reset()
+
+            # -- check for early stopping
+            if early_stop >= self.early_stopping:
+                logger.info("Early stopping activated")
+                break
 
         logger.info(f"Training completed in {convert_time(time.time() - since)}")
         logger.info(f"Best loss {best_loss:.4f} at epoch {best_epoch}")
@@ -185,10 +197,10 @@ class BaseModelTrainer(ABC):
         running_loss = 0.0
         self.model.train() if phase == "train" else self.model.eval()
         metrics.train() if phase == "train" else metrics.eval()
-
         # -- iterate over the dataloader
         for inputs, labels in tqdm(dataloader, desc=f"{phase}"):
             inputs = inputs.to(self.device)
+            labels = labels.type(torch.LongTensor)
             labels = labels.to(self.device)
 
             # -- forward operation
