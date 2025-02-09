@@ -14,7 +14,7 @@ Key contributions:
 
 ## 📊 Results 
 
-TODO: Add results and analysis.
+![Results of models](./assets/results.png)
 
 ## 🚀 Running the project
 
