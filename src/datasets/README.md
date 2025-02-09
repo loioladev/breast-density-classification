@@ -24,7 +24,7 @@ To download it, you need to create an account on Kaggle and download the [datase
 
 ### Preprocessing
 
-The dataset is in DICOM format, so it is necessary to convert it to PNG. The script `inbreast.py` does this conversion. It converts the DICOM to PNG using the `pydicom` library, and a function to recort the breast from the image is applied. The data also passes a CLAHE filter to improve the contrast, as seen in this [paper](https://www.sciencedirect.com/science/article/pii/S2352340920308222).
+The dataset is in DICOM format, so it is necessary to convert it to PNG. The script `inbreast_converter.py` does this conversion. It converts the DICOM to PNG using the `pydicom` library, and a function to recort the breast from the image is applied. The data also passes a CLAHE filter to improve the contrast, as seen in this [paper](https://www.sciencedirect.com/science/article/pii/S2352340920308222).
 
 ## RSNA 
 
@@ -36,7 +36,7 @@ To download it, you need to create an account on Kaggle and download the [datase
 
 ### Preprocessing
 
-The dataset is in DICOM format, so it is necessary to convert it to PNG. The script `rsna.py` does this conversion. It converts the DICOM to PNG using the `pydicom` library, and a function to recort the breast from the image is applied in the end. Before that, the image is normalized to the interval [0, 255] and a windowing filter is applied to improve the contrast.
+The dataset is in DICOM format, so it is necessary to convert it to PNG. The script `rsna_converter.py` does this conversion. It converts the DICOM to PNG using the `pydicom` library, and a function to recort the breast from the image is applied in the end. Before that, the image is normalized to the interval [0, 255] and a windowing filter is applied to improve the contrast.
 
 ## VinDr Mammo
 
@@ -48,13 +48,19 @@ Access [Physionet website](https://www.physionet.org/content/vindr-mammo/1.0.0/)
 
 ## Preprocessing
 
+The dataset is in DICOM format, so it is necessary to convert it to PNG. The script `vindr_converter.py` does this conversion. It converts the DICOM to PNG using the `pydicom` library, and a function to recort the breast from the image is applied. The data passes the same filter as the RSNA dataset.
+
 ## Mini-DDSM
+
+The Mini-DDSM dataset is a subset of the Digital Database for Screening Mammography (DDSM) dataset, which is a resource for use by the mammographic image analysis research community. The Mini-DDSM dataset is available at the [Kaggle](https://www.kaggle.com/datasets/cheddad/miniddsm2) platform.
 
 ### Download
 
 To download it, you need to create an account on Kaggle and download the [dataset](https://www.kaggle.com/datasets/cheddad/miniddsm2/data) via the website or API.
 
 ### Preprocessing
+
+The Mini-DDSM dataset is in DICOM format, so it is necessary to convert it to PNG. The script `miniddsm_converter.py` does this conversion. It converts the DICOM to PNG using the `pydicom` library, and a function to recort the breast from the image is applied. The images also have its borders cut by a fixed amount of pixels, to remove the white borders that are present in the images.
 
 ## BMCD
 
@@ -66,4 +72,4 @@ To download it, go to the [dataset website](https://zenodo.org/records/5036062) 
 
 ### Preprocessing
 
-The dataset is in DICOM format, so it is necessary to convert it to PNG. The script `bmcd.py` does this conversion. It converts the DICOM to PNG using the `pydicom` library, and a function to recort the breast from the image is applied. The data already has a good contrast, so no filter is applied.
+The dataset is in DICOM format, so it is necessary to convert it to PNG. The script `bmcd_converter.py` does this conversion. It converts the DICOM to PNG using the `pydicom` library, and a function to recort the breast from the image is applied. The data already has a good contrast, so no filter is applied.

@@ -1,0 +1,32 @@
+Overall Target Distribution:
+Target 0: 3482
+Target 1: 16586
+Target 2: 28251
+Target 3: 4704
+
+Target Distribution by Dataset:
+Dataset: bmcd
+  Target 0: 22
+  Target 1: 192
+  Target 2: 50
+  Target 3: 6
+Dataset: inbreast
+  Target 0: 108
+  Target 1: 141
+  Target 2: 96
+  Target 3: 22
+Dataset: miniddsm
+  Target 0: 850
+  Target 1: 2865
+  Target 2: 2263
+  Target 3: 1175
+Dataset: rsna
+  Target 0: 2423
+  Target 1: 11578
+  Target 2: 10989
+  Target 3: 1237
+Dataset: vindr
+  Target 0: 79
+  Target 1: 1810
+  Target 2: 14853
+  Target 3: 2264
